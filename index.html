@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
+
 <head>
     <meta charset="UTF-8">
 
@@ -13,700 +14,1066 @@
         content="#111827"
     >
 
-    <title>مدیریت مسابقات</title>
+    <title>برنامه مسابقات مجتمع</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 </head>
 
 <body>
 
-<div class="app">
+<header class="header">
 
-    <!-- هدر -->
-    <header class="topbar">
+    <div class="logo">
+        🏆 مسابقات مجتمع
+    </div>
 
-        <div>
-            <h1>🏆 مدیریت مسابقات</h1>
-            <p>مدیریت تیم‌ها، بازیکنان و نتایج</p>
+    <button
+        class="menu-button"
+        onclick="toggleMenu()"
+        aria-label="منو"
+    >
+        ☰
+    </button>
+
+</header>
+
+
+<nav id="mainMenu" class="menu">
+
+    <button onclick="showPage('home')">
+        🏠 خانه
+    </button>
+
+    <button onclick="showPage('teams')">
+        👥 تیم‌ها
+    </button>
+
+    <button onclick="showPage('players')">
+        👤 بازیکنان
+    </button>
+
+    <button onclick="showPage('matches')">
+        🏆 مسابقات
+    </button>
+
+    <button onclick="showPage('table')">
+        📊 جدول
+    </button>
+
+    <button onclick="showPage('stats')">
+        ⚽ آمار بازیکنان
+    </button>
+
+    <button onclick="showPage('results')">
+        🥇 نتایج
+    </button>
+
+    <button onclick="showPage('news')">
+        📢 اطلاعیه‌ها
+    </button>
+
+    <button onclick="showPage('admin')">
+        ⚙️ مدیریت
+    </button>
+
+</nav>
+
+
+<main>
+
+    <!-- ================= HOME ================= -->
+
+    <section id="home" class="page active">
+
+        <div class="hero">
+
+            <div class="trophy">
+                🏆
+            </div>
+
+            <h1>
+                مسابقات مجتمع
+            </h1>
+
+            <p>
+                مدیریت کامل تیم‌ها، بازیکنان، مسابقات و نتایج
+            </p>
+
         </div>
 
-        <div class="connection">
-            <span id="connectionDot"></span>
-            <span id="connectionText">آنلاین</span>
+
+        <div class="dashboard-grid">
+
+            <div class="dashboard-card">
+                <span>👥</span>
+                <strong id="homeTeams">0</strong>
+                <small>تیم</small>
+            </div>
+
+            <div class="dashboard-card">
+                <span>👤</span>
+                <strong id="homePlayers">0</strong>
+                <small>بازیکن</small>
+            </div>
+
+            <div class="dashboard-card">
+                <span>🏆</span>
+                <strong id="homeMatches">0</strong>
+                <small>مسابقه</small>
+            </div>
+
+            <div class="dashboard-card">
+                <span>⚽</span>
+                <strong id="homeGoals">0</strong>
+                <small>گل</small>
+            </div>
+
         </div>
 
-    </header>
+
+        <div class="home-actions">
+
+            <button
+                class="primary-button"
+                onclick="showPage('admin')"
+            >
+                ⚙️ مدیریت برنامه
+            </button>
+
+            <button
+                class="print-button"
+                onclick="printInformation()"
+            >
+                🖨️ چاپ گزارش کامل
+            </button>
+
+        </div>
 
 
-    <!-- پیام داخل برنامه -->
-    <div
-        id="toast"
-        class="toast"
-    ></div>
+        <div class="next-match-box">
 
+            <h2>
+                ⏭️ مسابقه بعدی
+            </h2>
 
-    <!-- منوی بخش‌ها -->
-    <nav class="navigation">
-
-        <button
-            class="nav-btn active"
-            data-section="dashboard"
-        >
-            🏠
-            <span>خانه</span>
-        </button>
-
-        <button
-            class="nav-btn"
-            data-section="teams"
-        >
-            👕
-            <span>تیم‌ها</span>
-        </button>
-
-        <button
-            class="nav-btn"
-            data-section="players"
-        >
-            👥
-            <span>بازیکنان</span>
-        </button>
-
-        <button
-            class="nav-btn"
-            data-section="matches"
-        >
-            ⚽
-            <span>مسابقات</span>
-        </button>
-
-        <button
-            class="nav-btn"
-            data-section="table"
-        >
-            📊
-            <span>جدول</span>
-        </button>
-
-        <button id="printData" class="main-btn">
-    🖨️ چاپ اطلاعات
-</button>
-        
-<button
-            class="nav-btn"
-            data-section="settings"
-        >
-            ⚙️
-            <span>تنظیمات</span>
-        </button>
-
-    </nav>
-
-
-    <main>
-
-        <!-- ================= خانه ================= -->
-
-        <section
-            id="dashboard"
-            class="section active"
-        >
-
-            <div class="welcome-card">
-
-                <div>
-                    <span class="small-label">
-                        مسابقات مجتمع
-                    </span>
-
-                    <h2>
-                        پنل مدیریت مسابقات 🏆
-                    </h2>
-
-                    <p>
-                        تیم‌ها، بازیکنان و نتایج مسابقات
-                        را از اینجا مدیریت کنید.
-                    </p>
-                </div>
-
-                <div class="trophy">
-                    🏆
-                </div>
-
+            <div id="nextMatch">
+                هنوز مسابقه‌ای ثبت نشده است.
             </div>
 
+        </div>
 
-            <div class="stats-grid">
+    </section>
 
-                <div class="stat-card">
-                    <span>👕</span>
-                    <strong id="teamCount">0</strong>
-                    <small>تیم</small>
-                </div>
 
-                <div class="stat-card">
-                    <span>👥</span>
-                    <strong id="playerCount">0</strong>
-                    <small>بازیکن</small>
-                </div>
 
-                <div class="stat-card">
-                    <span>⚽</span>
-                    <strong id="matchCount">0</strong>
-                    <small>مسابقه</small>
-                </div>
+    <!-- ================= TEAMS ================= -->
 
-                <div class="stat-card">
-                    <span>🏁</span>
-                    <strong id="finishedCount">0</strong>
-                    <small>مسابقه انجام‌شده</small>
-                </div>
+    <section id="teams" class="page">
 
+        <div class="page-header">
+
+            <div>
+                <h2>👥 تیم‌ها</h2>
+                <p>مدیریت تیم‌های مسابقات</p>
             </div>
 
+            <button
+                class="primary-button"
+                onclick="openTeamForm()"
+            >
+                ➕ افزودن تیم
+            </button>
 
-            <div class="quick-actions">
+        </div>
 
-                <button
-                    class="action-card"
-                    data-go="teams"
-                >
-                    <span>👕</span>
-                    <strong>مدیریت تیم‌ها</strong>
-                    <small>تیم جدید اضافه کنید</small>
-                </button>
 
-                <button
-                    class="action-card"
-                    data-go="players"
-                >
-                    <span>👥</span>
-                    <strong>مدیریت بازیکنان</strong>
-                    <small>نام و عکس بازیکنان</small>
-                </button>
+        <div id="teamsList" class="items-grid"></div>
 
-                <button
-                    class="action-card"
-                    data-go="matches"
-                >
-                    <span>⚽</span>
-                    <strong>ثبت مسابقه</strong>
-                    <small>نتیجه مسابقات</small>
-                </button>
+    </section>
 
-                <button
-                    class="action-card"
-                    data-go="table"
-                >
-                    <span>📊</span>
-                    <strong>جدول مسابقات</strong>
-                    <small>مشاهده رده‌بندی</small>
-                </button>
 
+
+    <!-- ================= PLAYERS ================= -->
+
+    <section id="players" class="page">
+
+        <div class="page-header">
+
+            <div>
+                <h2>👤 بازیکنان</h2>
+                <p>مدیریت بازیکنان و مشخصات آن‌ها</p>
             </div>
 
-        </section>
+            <button
+                class="primary-button"
+                onclick="openPlayerForm()"
+            >
+                ➕ افزودن بازیکن
+            </button>
+
+        </div>
 
 
-        <!-- ================= تیم‌ها ================= -->
+        <div class="search-box">
 
-        <section
-            id="teams"
-            class="section"
-        >
-
-            <div class="section-header">
-
-                <div>
-                    <h2>👕 تیم‌ها</h2>
-                    <p>تیم‌های شرکت‌کننده در مسابقات</p>
-                </div>
-
-                <button
-                    id="openTeamForm"
-                    class="primary-btn"
-                >
-                    + افزودن تیم
-                </button>
-
-            </div>
-
-
-            <div
-                id="teamForm"
-                class="form-card hidden"
+            <input
+                id="playerSearch"
+                type="text"
+                placeholder="🔍 جست‌وجوی بازیکن..."
+                oninput="renderPlayers()"
             >
 
-                <h3>➕ افزودن تیم</h3>
+            <select
+                id="playerTeamFilter"
+                onchange="renderPlayers()"
+            >
+                <option value="all">
+                    همه تیم‌ها
+                </option>
+            </select>
 
-                <div class="form-grid">
+        </div>
 
-                    <label>
-                        نام تیم
-                        <input
-                            id="teamName"
-                            type="text"
-                            placeholder="مثلاً استقلال"
-                        >
-                    </label>
 
-                    <label>
-                        نام مجتمع / واحد
-                        <input
-                            id="teamPlace"
-                            type="text"
-                            placeholder="مثلاً مجتمع گلستان"
-                        >
-                    </label>
+        <div
+            id="playersList"
+            class="players-grid"
+        ></div>
 
-                    <label>
-                        لوگوی تیم
-                        <input
-                            id="teamLogo"
-                            type="file"
-                            accept="image/*"
-                        >
-                    </label>
+    </section>
 
-                </div>
 
-                <div class="form-buttons">
 
-                    <button
-                        id="saveTeam"
-                        class="primary-btn"
-                    >
-                        ذخیره تیم
-                    </button>
+    <!-- ================= MATCHES ================= -->
 
-                    <button
-                        id="cancelTeam"
-                        class="secondary-btn"
-                    >
-                        انصراف
-                    </button>
+    <section id="matches" class="page">
 
-                </div>
+        <div class="page-header">
 
+            <div>
+                <h2>🏆 مسابقات</h2>
+                <p>برنامه و نتایج مسابقات</p>
             </div>
 
+            <button
+                class="primary-button"
+                onclick="openMatchForm()"
+            >
+                ➕ افزودن مسابقه
+            </button>
 
-            <div
-                id="teamsList"
-                class="cards-grid"
-            ></div>
-
-        </section>
+        </div>
 
 
-        <!-- ================= بازیکنان ================= -->
+        <div id="matchesList"></div>
 
-        <section
-            id="players"
-            class="section"
-        >
+    </section>
 
-            <div class="section-header">
 
-                <div>
-                    <h2>👥 بازیکنان</h2>
-                    <p>
-                        نام، عکس، شماره و اطلاعات بازیکنان
-                    </p>
-                </div>
+
+    <!-- ================= TABLE ================= -->
+
+    <section id="table" class="page">
+
+        <div class="page-header">
+
+            <div>
+                <h2>📊 جدول مسابقات</h2>
+                <p>جدول بر اساس نتایج ثبت‌شده</p>
+            </div>
+
+        </div>
+
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>رتبه</th>
+                        <th>تیم</th>
+                        <th>بازی</th>
+                        <th>برد</th>
+                        <th>مساوی</th>
+                        <th>باخت</th>
+                        <th>گل زده</th>
+                        <th>گل خورده</th>
+                        <th>تفاضل</th>
+                        <th>امتیاز</th>
+                    </tr>
+
+                </thead>
+
+                <tbody id="standings"></tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ================= STATS ================= -->
+
+    <section id="stats" class="page">
+
+        <div class="page-header">
+
+            <div>
+                <h2>⚽ آمار بازیکنان</h2>
+                <p>گل، کارت و تعداد بازی</p>
+            </div>
+
+        </div>
+
+
+        <div class="stats-highlight">
+
+            <div class="highlight-card">
+                <span>👑</span>
+                <strong id="topScorerName">-</strong>
+                <small>آقای گل</small>
+            </div>
+
+            <div class="highlight-card">
+                <span>⚽</span>
+                <strong id="topScorerGoals">0</strong>
+                <small>گل</small>
+            </div>
+
+        </div>
+
+
+        <div class="table-container">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>بازیکن</th>
+                        <th>تیم</th>
+                        <th>شماره</th>
+                        <th>پست</th>
+                        <th>بازی</th>
+                        <th>گل</th>
+                        <th>پاس گل</th>
+                        <th>🟨</th>
+                        <th>🟥</th>
+                    </tr>
+
+                </thead>
+
+                <tbody id="playerStats"></tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ================= RESULTS ================= -->
+
+    <section id="results" class="page">
+
+        <div class="page-header">
+
+            <div>
+                <h2>🥇 نتایج</h2>
+                <p>نتایج مسابقات برگزارشده</p>
+            </div>
+
+        </div>
+
+
+        <div id="resultsList"></div>
+
+    </section>
+
+
+
+    <!-- ================= NEWS ================= -->
+
+    <section id="news" class="page">
+
+        <div class="page-header">
+
+            <div>
+                <h2>📢 اطلاعیه‌ها</h2>
+                <p>اطلاعیه‌های مسابقات</p>
+            </div>
+
+            <button
+                class="primary-button"
+                onclick="openNewsForm()"
+            >
+                ➕ اطلاعیه جدید
+            </button>
+
+        </div>
+
+
+        <div id="newsList"></div>
+
+    </section>
+
+
+
+    <!-- ================= ADMIN ================= -->
+
+    <section id="admin" class="page">
+
+        <div class="page-header">
+
+            <div>
+                <h2>⚙️ مدیریت</h2>
+                <p>مدیریت اطلاعات برنامه</p>
+            </div>
+
+        </div>
+
+
+        <div class="admin-grid">
+
+            <button
+                onclick="openTeamForm()"
+                class="admin-card"
+            >
+                👥
+                <strong>مدیریت تیم‌ها</strong>
+                <small>افزودن و ویرایش تیم</small>
+            </button>
+
+
+            <button
+                onclick="openPlayerForm()"
+                class="admin-card"
+            >
+                👤
+                <strong>مدیریت بازیکنان</strong>
+                <small>افزودن و ویرایش بازیکن</small>
+            </button>
+
+
+            <button
+                onclick="openMatchForm()"
+                class="admin-card"
+            >
+                🏆
+                <strong>مدیریت مسابقات</strong>
+                <small>برنامه و نتیجه</small>
+            </button>
+
+
+            <button
+                onclick="openNewsForm()"
+                class="admin-card"
+            >
+                📢
+                <strong>اطلاعیه‌ها</strong>
+                <small>افزودن اطلاعیه</small>
+            </button>
+
+
+            <button
+                onclick="printInformation()"
+                class="admin-card"
+            >
+                🖨️
+                <strong>چاپ گزارش</strong>
+                <small>چاپ تمام اطلاعات</small>
+            </button>
+
+
+            <button
+                onclick="backupData()"
+                class="admin-card"
+            >
+                💾
+                <strong>پشتیبان‌گیری</strong>
+                <small>ذخیره فایل اطلاعات</small>
+            </button>
+
+
+            <label class="admin-card import-card">
+
+                📥
+
+                <strong>
+                    بازیابی اطلاعات
+                </strong>
+
+                <small>
+                    انتخاب فایل پشتیبان
+                </small>
+
+                <input
+                    type="file"
+                    accept=".json"
+                    onchange="restoreData(event)"
+                    hidden
+                >
+
+            </label>
+
+
+            <button
+                onclick="resetAllData()"
+                class="admin-card danger-card"
+            >
+                🗑️
+                <strong>حذف همه اطلاعات</strong>
+                <small>با احتیاط استفاده شود</small>
+            </button>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+
+<footer>
+
+    <p>
+        🏆 برنامه مسابقات مجتمع
+    </p>
+
+    <p>
+        نسخه 1.0
+    </p>
+
+</footer>
+
+
+
+<!-- ======================================================
+     TEAM MODAL
+====================================================== -->
+
+<div
+    id="teamModal"
+    class="modal"
+>
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h2 id="teamModalTitle">
+                ➕ افزودن تیم
+            </h2>
+
+            <button onclick="closeModal('teamModal')">
+                ✕
+            </button>
+
+        </div>
+
+
+        <form onsubmit="saveTeam(event)">
+
+            <input
+                id="teamId"
+                type="hidden"
+            >
+
+
+            <label>
+                نام تیم
+                <input
+                    id="teamName"
+                    type="text"
+                    required
+                    placeholder="مثلاً تیم آبی"
+                >
+            </label>
+
+
+            <label>
+                رنگ تیم
+                <input
+                    id="teamColor"
+                    type="color"
+                    value="#2563eb"
+                >
+            </label>
+
+
+            <label>
+                عکس / لوگوی تیم
+                <input
+                    id="teamImage"
+                    type="file"
+                    accept="image/*"
+                >
+            </label>
+
+
+            <img
+                id="teamImagePreview"
+                class="image-preview hidden"
+                alt="پیش‌نمایش تیم"
+            >
+
+
+            <div class="form-actions">
 
                 <button
-                    id="openPlayerForm"
-                    class="primary-btn"
+                    type="button"
+                    onclick="closeModal('teamModal')"
+                    class="secondary-button"
                 >
-                    + افزودن بازیکن
+                    انصراف
+                </button>
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    💾 ذخیره تیم
                 </button>
 
             </div>
 
+        </form>
 
-            <div
-                id="playerForm"
-                class="form-card hidden"
+    </div>
+
+</div>
+
+
+
+<!-- ======================================================
+     PLAYER MODAL
+====================================================== -->
+
+<div
+    id="playerModal"
+    class="modal"
+>
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h2 id="playerModalTitle">
+                ➕ افزودن بازیکن
+            </h2>
+
+            <button onclick="closeModal('playerModal')">
+                ✕
+            </button>
+
+        </div>
+
+
+        <form onsubmit="savePlayer(event)">
+
+            <input
+                id="playerId"
+                type="hidden"
             >
 
-                <h3>➕ افزودن بازیکن</h3>
 
-                <div class="form-grid">
-
-                    <label>
-                        نام و نام خانوادگی
-                        <input
-                            id="playerName"
-                            type="text"
-                            placeholder="مثلاً علی رضایی"
-                        >
-                    </label>
-
-                    <label>
-                        تیم
-                        <select id="playerTeam">
-                            <option value="">
-                                انتخاب تیم
-                            </option>
-                        </select>
-                    </label>
-
-                    <label>
-                        شماره پیراهن
-                        <input
-                            id="playerNumber"
-                            type="number"
-                            min="0"
-                            max="99"
-                            placeholder="10"
-                        >
-                    </label>
-
-                    <label>
-                        پست
-                        <select id="playerPosition">
-
-                            <option value="دروازه‌بان">
-                                دروازه‌بان
-                            </option>
-
-                            <option value="مدافع">
-                                مدافع
-                            </option>
-
-                            <option value="هافبک">
-                                هافبک
-                            </option>
-
-                            <option value="مهاجم">
-                                مهاجم
-                            </option>
-
-                        </select>
-                    </label>
-
-                    <label class="full-width">
-                        عکس بازیکن
-                        <input
-                            id="playerPhoto"
-                            type="file"
-                            accept="image/*"
-                        >
-                    </label>
-
-                </div>
+            <label>
+                نام و نام خانوادگی
+                <input
+                    id="playerName"
+                    type="text"
+                    required
+                    placeholder="مثلاً علی رضایی"
+                >
+            </label>
 
 
-                <label class="checkbox-label">
-
-                    <input
-                        id="playerCaptain"
-                        type="checkbox"
-                    >
-
-                    🧑‍✈️ این بازیکن کاپیتان تیم است
-
-                </label>
-
-
-                <div
-                    id="playerPreview"
-                    class="image-preview"
-                ></div>
+            <label>
+                شماره پیراهن
+                <input
+                    id="playerNumber"
+                    type="number"
+                    min="0"
+                    max="99"
+                    required
+                    placeholder="10"
+                >
+            </label>
 
 
-                <div class="form-buttons">
+            <label>
+                پست
+                <select id="playerPosition" required>
 
-                    <button
-                        id="savePlayer"
-                        class="primary-btn"
-                    >
-                        ذخیره بازیکن
-                    </button>
+                    <option value="">
+                        انتخاب پست
+                    </option>
 
-                    <button
-                        id="cancelPlayer"
-                        class="secondary-btn"
-                    >
-                        انصراف
-                    </button>
+                    <option value="دروازه‌بان">
+                        🧤 دروازه‌بان
+                    </option>
 
-                </div>
+                    <option value="مدافع">
+                        🛡️ مدافع
+                    </option>
 
-            </div>
+                    <option value="هافبک">
+                        ⚙️ هافبک
+                    </option>
 
-
-            <div class="filter-box">
-
-                <select id="playerTeamFilter">
-
-                    <option value="all">
-                        همه تیم‌ها
+                    <option value="مهاجم">
+                        ⚡ مهاجم
                     </option>
 
                 </select>
+            </label>
+
+
+            <label>
+                تیم
+                <select id="playerTeam" required></select>
+            </label>
+
+
+            <label class="checkbox-label">
 
                 <input
-                    id="playerSearch"
-                    type="search"
-                    placeholder="🔎 جستجوی بازیکن..."
+                    id="playerCaptain"
+                    type="checkbox"
                 >
 
-            </div>
+                👑 این بازیکن کاپیتان است
+
+            </label>
 
 
-            <div
-                id="playersList"
-                class="players-grid"
-            ></div>
+            <label>
+                عکس بازیکن
+                <input
+                    id="playerImage"
+                    type="file"
+                    accept="image/*"
+                >
+            </label>
 
-        </section>
+
+            <img
+                id="playerImagePreview"
+                class="image-preview hidden"
+                alt="پیش‌نمایش بازیکن"
+            >
 
 
-        <!-- ================= مسابقات ================= -->
-
-        <section
-            id="matches"
-            class="section"
-        >
-
-            <div class="section-header">
-
-                <div>
-                    <h2>⚽ مسابقات</h2>
-                    <p>ثبت و مدیریت نتایج</p>
-                </div>
+            <div class="form-actions">
 
                 <button
-                    id="openMatchForm"
-                    class="primary-btn"
+                    type="button"
+                    onclick="closeModal('playerModal')"
+                    class="secondary-button"
                 >
-                    + مسابقه جدید
+                    انصراف
+                </button>
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    💾 ذخیره بازیکن
                 </button>
 
             </div>
 
+        </form>
 
-            <div
-                id="matchForm"
-                class="form-card hidden"
+    </div>
+
+</div>
+
+
+
+<!-- ======================================================
+     MATCH MODAL
+====================================================== -->
+
+<div
+    id="matchModal"
+    class="modal"
+>
+
+    <div class="modal-box large-modal">
+
+        <div class="modal-header">
+
+            <h2>
+                🏆 مسابقه
+            </h2>
+
+            <button onclick="closeModal('matchModal')">
+                ✕
+            </button>
+
+        </div>
+
+
+        <form onsubmit="saveMatch(event)">
+
+            <input
+                id="matchId"
+                type="hidden"
             >
 
-                <h3>⚽ ثبت مسابقه</h3>
 
-                <div class="match-form">
-
-                    <label>
-                        تیم اول
-                        <select id="matchHome">
-                            <option value="">
-                                انتخاب تیم
-                            </option>
-                        </select>
-                    </label>
-
-                    <div class="vs">
-                        VS
-                    </div>
-
-                    <label>
-                        تیم دوم
-                        <select id="matchAway">
-                            <option value="">
-                                انتخاب تیم
-                            </option>
-                        </select>
-                    </label>
-
-                </div>
+            <label>
+                عنوان مسابقه
+                <input
+                    id="matchTitle"
+                    type="text"
+                    required
+                    placeholder="مثلاً هفته اول"
+                >
+            </label>
 
 
-                <div class="form-grid">
+            <div class="two-columns">
+
+                <label>
+                    تیم اول
+                    <select
+                        id="matchTeam1"
+                        required
+                    ></select>
+                </label>
+
+
+                <label>
+                    تیم دوم
+                    <select
+                        id="matchTeam2"
+                        required
+                    ></select>
+                </label>
+
+            </div>
+
+
+            <div class="two-columns">
+
+                <label>
+                    تاریخ
+                    <input
+                        id="matchDate"
+                        type="date"
+                        required
+                    >
+                </label>
+
+
+                <label>
+                    ساعت
+                    <input
+                        id="matchTime"
+                        type="time"
+                        required
+                    >
+                </label>
+
+            </div>
+
+
+            <label>
+                وضعیت
+                <select id="matchStatus">
+
+                    <option value="scheduled">
+                        برنامه‌ریزی‌شده
+                    </option>
+
+                    <option value="finished">
+                        پایان‌یافته
+                    </option>
+
+                </select>
+            </label>
+
+
+            <div id="matchResultFields">
+
+                <h3>
+                    ⚽ نتیجه مسابقه
+                </h3>
+
+
+                <div class="two-columns">
 
                     <label>
                         گل تیم اول
                         <input
-                            id="homeScore"
+                            id="matchScore1"
                             type="number"
                             min="0"
                             value="0"
                         >
                     </label>
+
 
                     <label>
                         گل تیم دوم
                         <input
-                            id="awayScore"
+                            id="matchScore2"
                             type="number"
                             min="0"
                             value="0"
                         >
                     </label>
 
-                    <label>
-                        تاریخ مسابقه
-                        <input
-                            id="matchDate"
-                            type="date"
-                        >
-                    </label>
-
                 </div>
 
 
-                <label class="checkbox-label">
+                <h3>
+                    ⚽ ثبت گلزنان
+                </h3>
 
-                    <input
-                        id="matchFinished"
-                        type="checkbox"
-                        checked
-                    >
+                <div
+                    id="goalsEditor"
+                    class="goals-editor"
+                ></div>
 
-                    نتیجه مسابقه نهایی است
-
-                </label>
-
-
-                <div class="form-buttons">
-
-                    <button
-                        id="saveMatch"
-                        class="primary-btn"
-                    >
-                        ذخیره مسابقه
-                    </button>
-
-                    <button
-                        id="cancelMatch"
-                        class="secondary-btn"
-                    >
-                        انصراف
-                    </button>
-
-                </div>
-
-            </div>
-
-
-            <div
-                id="matchesList"
-                class="matches-list"
-            ></div>
-
-        </section>
-
-
-        <!-- ================= جدول ================= -->
-
-        <section
-            id="table"
-            class="section"
-        >
-
-            <div class="section-header">
-
-                <div>
-                    <h2>📊 جدول مسابقات</h2>
-                    <p>رده‌بندی بر اساس نتایج ثبت‌شده</p>
-                </div>
-
-            </div>
-
-
-            <div class="table-wrapper">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-                            <th>#</th>
-                            <th>تیم</th>
-                            <th>بازی</th>
-                            <th>برد</th>
-                            <th>مساوی</th>
-                            <th>باخت</th>
-                            <th>گل</th>
-                            <th>امتیاز</th>
-                        </tr>
-
-                    </thead>
-
-                    <tbody id="standingsBody"></tbody>
-
-                </table>
-
-            </div>
-
-        </section>
-
-
-        <!-- ================= تنظیمات ================= -->
-
-        <section
-            id="settings"
-            class="section"
-        >
-
-            <div class="section-header">
-
-                <div>
-                    <h2>⚙️ تنظیمات</h2>
-                    <p>مدیریت اطلاعات برنامه</p>
-                </div>
-
-            </div>
-
-
-            <div class="settings-list">
 
                 <button
-                    id="exportData"
-                    class="setting-btn"
+                    type="button"
+                    onclick="addGoalRow()"
+                    class="secondary-button"
                 >
-                    📦 خروجی گرفتن از اطلاعات
-                </button>
-
-                <button
-                    id="importData"
-                    class="setting-btn"
-                >
-                    📥 وارد کردن اطلاعات
-                </button>
-
-                <button
-                    id="clearData"
-                    class="setting-btn danger"
-                >
-                    🗑️ حذف تمام اطلاعات
+                    ➕ افزودن گل
                 </button>
 
             </div>
 
 
-            <input
-                id="importFile"
-                type="file"
-                accept=".json"
-                hidden
-            >
+            <div class="form-actions">
 
-        </section>
+                <button
+                    type="button"
+                    onclick="closeModal('matchModal')"
+                    class="secondary-button"
+                >
+                    انصراف
+                </button>
 
-    </main>
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    💾 ذخیره مسابقه
+                </button>
 
+            </div>
 
-    <footer>
-        <p>
-            🏆 سیستم مدیریت مسابقات مجتمع‌ها
-        </p>
-    </footer>
+        </form>
+
+    </div>
 
 </div>
+
+
+
+<!-- ======================================================
+     NEWS MODAL
+====================================================== -->
+
+<div
+    id="newsModal"
+    class="modal"
+>
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <h2>
+                📢 اطلاعیه
+            </h2>
+
+            <button onclick="closeModal('newsModal')">
+                ✕
+            </button>
+
+        </div>
+
+
+        <form onsubmit="saveNews(event)">
+
+            <input
+                id="newsId"
+                type="hidden"
+            >
+
+
+            <label>
+                عنوان
+                <input
+                    id="newsTitle"
+                    type="text"
+                    required
+                >
+            </label>
+
+
+            <label>
+                متن اطلاعیه
+
+                <textarea
+                    id="newsText"
+                    rows="6"
+                    required
+                ></textarea>
+
+            </label>
+
+
+            <div class="form-actions">
+
+                <button
+                    type="button"
+                    onclick="closeModal('newsModal')"
+                    class="secondary-button"
+                >
+                    انصراف
+                </button>
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    💾 ذخیره اطلاعیه
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+<div
+    id="toast"
+    class="toast"
+></div>
 
 
 <script src="app.js"></script>
 
 </body>
+
 </html>
