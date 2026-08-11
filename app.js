@@ -1,352 +1,372 @@
-"use strict";
-
 /* =========================================================
-   سیستم مدیریت مسابقات مجتمع‌ها
-   هماهنگ با index.html و style.css فعلی
-   ========================================================= */
+   DATABASE
+========================================================= */
+
+const STORAGE_KEY = "communityTournamentData_v1";
 
 
-/* =========================================================
-   تنظیمات
-   ========================================================= */
-
-const STORAGE_KEYS = {
-    teams: "teams",
-    players: "players",
-    matches: "matches"
-};
+let data = loadData();
 
 
-/* =========================================================
-   داده‌های اصلی
-   ========================================================= */
+function defaultData() {
 
-let teams = loadArray(STORAGE_KEYS.teams);
-let players = loadArray(STORAGE_KEYS.players);
-let matches = loadArray(STORAGE_KEYS.matches);
+    return {
+        teams: [],
+        players: [],
+        matches: [],
+        news: []
+    };
+
+}
 
 
-/* =========================================================
-   ابزارهای عمومی
-   ========================================================= */
+function loadData() {
 
-function loadArray(key) {
     try {
-        const raw = localStorage.getItem(key);
 
-        if (!raw) {
-            return [];
+        const saved =
+            localStorage.getItem(STORAGE_KEY);
+
+        if (!saved) {
+            return defaultData();
         }
 
-        const data = JSON.parse(raw);
+        const parsed =
+            JSON.parse(saved);
 
-        return Array.isArray(data) ? data : [];
+        return {
+            teams: Array.isArray(parsed.teams)
+                ? parsed.teams
+                : [],
+
+            players: Array.isArray(parsed.players)
+                ? parsed.players
+                : [],
+
+            matches: Array.isArray(parsed.matches)
+                ? parsed.matches
+                : [],
+
+            news: Array.isArray(parsed.news)
+                ? parsed.news
+                : []
+        };
 
     } catch (error) {
-        console.error("خطا در خواندن اطلاعات:", error);
-        return [];
+
+        console.error(error);
+
+        return defaultData();
+
     }
+
 }
 
 
-function saveAll() {
-    try {
-        localStorage.setItem(
-            STORAGE_KEYS.teams,
-            JSON.stringify(teams)
-        );
+function saveData() {
 
-        localStorage.setItem(
-            STORAGE_KEYS.players,
-            JSON.stringify(players)
-        );
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(data)
+    );
 
-        localStorage.setItem(
-            STORAGE_KEYS.matches,
-            JSON.stringify(matches)
-        );
-
-        return true;
-
-    } catch (error) {
-        console.error("خطا در ذخیره اطلاعات:", error);
-
-        showToast(
-            "❌ ذخیره اطلاعات انجام نشد. ممکن است حافظه مرورگر پر شده باشد."
-        );
-
-        return false;
-    }
 }
 
 
-function createId() {
+function generateId(prefix = "id") {
+
     return (
-        Date.now().toString(36) +
+        prefix +
+        "_" +
+        Date.now() +
+        "_" +
         Math.random()
             .toString(36)
-            .substring(2, 10)
+            .substring(2, 8)
     );
+
 }
 
 
+/* =========================================================
+   HELPERS
+========================================================= */
+
 function escapeHTML(value) {
-    return String(value ?? "")
+
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    return String(value)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+
 }
 
 
 function getTeam(teamId) {
-    return teams.find(
-        team => String(team.id) === String(teamId)
+
+    return data.teams.find(
+        team => team.id === teamId
     );
+
 }
 
 
-function getDefaultPhoto() {
-    return (
-        "data:image/svg+xml;charset=UTF-8," +
-        encodeURIComponent(`
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 width="200"
-                 height="200"
-                 viewBox="0 0 200 200">
+function getPlayer(playerId) {
 
-                <rect
-                    width="200"
-                    height="200"
-                    fill="#e5e7eb"
-                />
-
-                <circle
-                    cx="100"
-                    cy="75"
-                    r="35"
-                    fill="#9ca3af"
-                />
-
-                <path
-                    d="M35 185
-                       C45 130 155 130 165 185"
-                    fill="#9ca3af"
-                />
-            </svg>
-        `)
+    return data.players.find(
+        player => player.id === playerId
     );
+
 }
 
 
-/* =========================================================
-   پیام Toast
-   ========================================================= */
+function getTeamName(teamId) {
+
+    const team =
+        getTeam(teamId);
+
+    return team
+        ? team.name
+        : "تیم حذف‌شده";
+
+}
+
+
+function formatDate(date) {
+
+    if (!date) {
+        return "-";
+    }
+
+    return new Date(date + "T00:00:00")
+        .toLocaleDateString("fa-IR");
+}
+
 
 function showToast(message) {
-    const toast = document.getElementById("toast");
 
-    if (!toast) {
-        return;
-    }
+    const toast =
+        document.getElementById("toast");
 
-    toast.textContent = message;
+    toast.textContent =
+        message;
+
     toast.classList.add("show");
 
-    clearTimeout(showToast.timer);
+    setTimeout(() => {
 
-    showToast.timer = setTimeout(() => {
         toast.classList.remove("show");
+
     }, 2500);
+
 }
 
 
 /* =========================================================
-   عکس
-   ========================================================= */
+   NAVIGATION
+========================================================= */
 
-function readImage(file, callback) {
+function toggleMenu() {
 
-    if (!file) {
-        callback("");
-        return;
-    }
+    document
+        .getElementById("mainMenu")
+        .classList.toggle("open");
 
-    if (!file.type || !file.type.startsWith("image/")) {
-        showToast("❌ لطفاً یک فایل تصویری انتخاب کنید.");
-        callback("");
-        return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-        callback(reader.result);
-    };
-
-    reader.onerror = () => {
-        showToast("❌ خواندن عکس انجام نشد.");
-        callback("");
-    };
-
-    reader.readAsDataURL(file);
 }
 
 
-/* =========================================================
-   جابه‌جایی بخش‌ها
-   ========================================================= */
-
-function openSection(sectionId) {
+function showPage(pageId) {
 
     document
-        .querySelectorAll(".section")
-        .forEach(section => {
-            section.classList.remove("active");
+        .querySelectorAll(".page")
+        .forEach(page => {
+
+            page.classList.remove("active");
+
         });
 
-    document
-        .querySelectorAll(".nav-btn")
-        .forEach(button => {
-            button.classList.remove("active");
-        });
 
-    const section =
-        document.getElementById(sectionId);
+    const page =
+        document.getElementById(pageId);
 
-    if (section) {
-        section.classList.add("active");
+    if (page) {
+        page.classList.add("active");
     }
 
-    const navButton =
-        document.querySelector(
-            `.nav-btn[data-section="${sectionId}"]`
-        );
 
-    if (navButton) {
-        navButton.classList.add("active");
+    document
+        .getElementById("mainMenu")
+        .classList.remove("open");
+
+
+    if (pageId === "teams") {
+        renderTeams();
+    }
+
+    if (pageId === "players") {
+        renderPlayerFilters();
+        renderPlayers();
+    }
+
+    if (pageId === "matches") {
+        renderMatches();
+    }
+
+    if (pageId === "table") {
+        renderStandings();
+    }
+
+    if (pageId === "stats") {
+        renderPlayerStats();
+    }
+
+    if (pageId === "results") {
+        renderResults();
+    }
+
+    if (pageId === "news") {
+        renderNews();
     }
 
     window.scrollTo({
         top: 0,
         behavior: "smooth"
     });
+
 }
 
 
 /* =========================================================
-   منوی اصلی
-   ========================================================= */
+   IMAGE
+========================================================= */
 
-document
-    .querySelectorAll(".nav-btn")
-    .forEach(button => {
+function readImage(file) {
 
-        button.addEventListener("click", () => {
+    return new Promise((resolve, reject) => {
 
-            openSection(
-                button.dataset.section
-            );
+        if (!file) {
+            resolve("");
+            return;
+        }
 
-        });
+        const reader =
+            new FileReader();
 
-    });
+        reader.onload = () => {
 
+            resolve(reader.result);
 
-document
-    .querySelectorAll("[data-go]")
-    .forEach(button => {
+        };
 
-        button.addEventListener("click", () => {
+        reader.onerror = reject;
 
-            openSection(
-                button.dataset.go
-            );
-
-        });
+        reader.readAsDataURL(file);
 
     });
 
-
-/* =========================================================
-   آمار صفحه اصلی
-   ========================================================= */
-
-function updateStats() {
-
-    const teamCount =
-        document.getElementById("teamCount");
-
-    const playerCount =
-        document.getElementById("playerCount");
-
-    const matchCount =
-        document.getElementById("matchCount");
-
-    const finishedCount =
-        document.getElementById("finishedCount");
-
-
-    if (teamCount) {
-        teamCount.textContent = teams.length;
-    }
-
-    if (playerCount) {
-        playerCount.textContent = players.length;
-    }
-
-    if (matchCount) {
-        matchCount.textContent = matches.length;
-    }
-
-    if (finishedCount) {
-        finishedCount.textContent =
-            matches.filter(
-                match => match.finished === true
-            ).length;
-    }
 }
 
 
 /* =========================================================
-   فرم تیم
-   ========================================================= */
+   TEAMS
+========================================================= */
 
-const teamForm =
-    document.getElementById("teamForm");
+function openTeamForm(teamId = "") {
+
+    const modal =
+        document.getElementById("teamModal");
+
+    const title =
+        document.getElementById("teamModalTitle");
 
 
-document
-    .getElementById("openTeamForm")
-    .addEventListener("click", () => {
+    document
+        .getElementById("teamId")
+        .value = teamId;
 
-        teamForm.classList.remove("hidden");
+
+    document
+        .getElementById("teamImage")
+        .value = "";
+
+
+    if (teamId) {
+
+        const team =
+            getTeam(teamId);
+
+        if (!team) return;
+
+        title.textContent =
+            "✏️ ویرایش تیم";
 
         document
             .getElementById("teamName")
-            .focus();
+            .value = team.name;
 
-    });
-
-
-document
-    .getElementById("cancelTeam")
-    .addEventListener("click", () => {
-
-        teamForm.classList.add("hidden");
-
-        clearTeamForm();
-
-    });
+        document
+            .getElementById("teamColor")
+            .value =
+                team.color || "#2563eb";
 
 
-document
-    .getElementById("saveTeam")
-    .addEventListener("click", saveTeam);
+        const preview =
+            document
+                .getElementById("teamImagePreview");
 
 
-function saveTeam() {
+        if (team.image) {
+
+            preview.src =
+                team.image;
+
+            preview.classList.remove("hidden");
+
+        } else {
+
+            preview.classList.add("hidden");
+
+        }
+
+    } else {
+
+        title.textContent =
+            "➕ افزودن تیم";
+
+        document
+            .getElementById("teamName")
+            .value = "";
+
+        document
+            .getElementById("teamColor")
+            .value = "#2563eb";
+
+        document
+            .getElementById("teamImagePreview")
+            .classList.add("hidden");
+
+    }
+
+
+    modal.classList.add("show");
+
+}
+
+
+async function saveTeam(event) {
+
+    event.preventDefault();
+
+
+    const id =
+        document.getElementById("teamId").value;
+
 
     const name =
         document
@@ -354,97 +374,109 @@ function saveTeam() {
             .value
             .trim();
 
-    const place =
+
+    const color =
         document
-            .getElementById("teamPlace")
-            .value
-            .trim();
+            .getElementById("teamColor")
+            .value;
 
-    const logoInput =
-        document.getElementById("teamLogo");
 
-    const file =
-        logoInput.files[0];
+    const imageFile =
+        document
+            .getElementById("teamImage")
+            .files[0];
 
 
     if (!name) {
-        showToast("⚠️ نام تیم را وارد کنید.");
         return;
     }
 
 
-    /* جلوگیری از نام تکراری */
+    let image = "";
 
-    const duplicate =
-        teams.some(
-            team =>
-                team.name.trim().toLowerCase() ===
-                name.toLowerCase()
-        );
 
-    if (duplicate) {
-        showToast("⚠️ این نام تیم قبلاً ثبت شده است.");
-        return;
+    if (id) {
+
+        const oldTeam =
+            getTeam(id);
+
+        image =
+            oldTeam
+                ? oldTeam.image || ""
+                : "";
+
     }
 
 
-    readImage(file, image => {
+    if (imageFile) {
 
-        const team = {
-            id: createId(),
-            name: name,
-            place: place,
-            logo: image || getDefaultPhoto()
-        };
+        image =
+            await readImage(imageFile);
+
+    }
 
 
-        teams.push(team);
+    if (id) {
 
-        if (!saveAll()) {
-            return;
-        }
+        const team =
+            getTeam(id);
 
-        renderAll();
+        team.name = name;
+        team.color = color;
+        team.image = image;
 
-        clearTeamForm();
+        showToast("تیم ویرایش شد.");
 
-        teamForm.classList.add("hidden");
+    } else {
 
-        showToast("✅ تیم با موفقیت اضافه شد.");
+        data.teams.push({
 
-    });
+            id: generateId("team"),
+
+            name,
+
+            color,
+
+            image,
+
+            createdAt:
+                new Date().toISOString()
+
+        });
+
+        showToast("تیم اضافه شد.");
+
+    }
+
+
+    saveData();
+
+    closeModal("teamModal");
+
+    renderTeams();
+
+    updateDashboard();
+
+    renderPlayerFilters();
+
+    updateTeamSelects();
+
 }
 
-
-function clearTeamForm() {
-
-    document.getElementById("teamName").value = "";
-
-    document.getElementById("teamPlace").value = "";
-
-    document.getElementById("teamLogo").value = "";
-}
-
-
-/* =========================================================
-   نمایش تیم‌ها
-   ========================================================= */
 
 function renderTeams() {
 
     const container =
         document.getElementById("teamsList");
 
-    if (!container) {
-        return;
-    }
 
-
-    if (!teams.length) {
+    if (data.teams.length === 0) {
 
         container.innerHTML = `
-            <div class="empty-state">
+            <div class="empty">
                 هنوز تیمی اضافه نشده است.
+                <br><br>
+                از دکمه «افزودن تیم» شروع کنید.
             </div>
         `;
 
@@ -453,305 +485,325 @@ function renderTeams() {
 
 
     container.innerHTML =
-        teams.map(team => {
+        data.teams
+            .map(team => {
 
-            const count =
-                players.filter(
-                    player =>
-                        String(player.teamId) ===
-                        String(team.id)
-                ).length;
+                const playerCount =
+                    data.players.filter(
+                        player =>
+                            player.teamId === team.id
+                    ).length;
 
 
-            return `
-                <article class="team-card">
+                const imageHTML =
+                    team.image
 
-                    <img
-                        class="team-logo"
-                        src="${team.logo || getDefaultPhoto()}"
-                        alt="لوگوی ${escapeHTML(team.name)}"
-                    >
+                        ? `
+                            <img
+                                class="team-logo"
+                                src="${team.image}"
+                                alt="${escapeHTML(team.name)}"
+                            >
+                        `
 
-                    <h3>
-                        ${escapeHTML(team.name)}
-                    </h3>
+                        : `
+                            <div
+                                class="team-logo-placeholder"
+                                style="border-right:8px solid ${team.color || "#2563eb"}"
+                            >
+                                ⚽
+                            </div>
+                        `;
 
-                    <p>
-                        ${escapeHTML(
-                            team.place || "بدون محل"
-                        )}
-                    </p>
 
-                    <p>
-                        👥 ${count} بازیکن
-                    </p>
+                return `
 
-                    <div class="card-buttons">
+                    <div class="team-card">
 
-                        <button
-                            class="small-btn team-players-btn"
-                            data-team-id="${escapeHTML(team.id)}"
-                        >
-                            👥 بازیکنان
-                        </button>
+                        <div class="team-top">
 
-                        <button
-                            class="small-btn delete-btn team-delete-btn"
-                            data-team-id="${escapeHTML(team.id)}"
-                        >
-                            🗑️ حذف
-                        </button>
+                            ${imageHTML}
+
+                            <div>
+
+                                <h3>
+                                    ${escapeHTML(team.name)}
+                                </h3>
+
+                                <p>
+                                    👤 ${playerCount} بازیکن
+                                </p>
+
+                                <p>
+                                    🎨 رنگ تیم
+                                </p>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="card-actions">
+
+                            <button
+                                class="small-button"
+                                onclick="openTeamForm('${team.id}')"
+                            >
+                                ✏️ ویرایش
+                            </button>
+
+                            <button
+                                class="small-button"
+                                onclick="showTeamPlayers('${team.id}')"
+                            >
+                                👤 بازیکنان
+                            </button>
+
+                            <button
+                                class="small-button danger"
+                                onclick="deleteTeam('${team.id}')"
+                            >
+                                🗑️ حذف
+                            </button>
+
+                        </div>
 
                     </div>
 
-                </article>
-            `;
+                `;
 
-        }).join("");
+            })
+            .join("");
 
-
-    container
-        .querySelectorAll(".team-players-btn")
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    showTeamPlayers(
-                        button.dataset.teamId
-                    );
-
-                }
-            );
-
-        });
-
-
-    container
-        .querySelectorAll(".team-delete-btn")
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    deleteTeam(
-                        button.dataset.teamId
-                    );
-
-                }
-            );
-
-        });
 }
 
-
-/* =========================================================
-   بازیکنان یک تیم
-   ========================================================= */
 
 function showTeamPlayers(teamId) {
 
-    const filter =
-        document.getElementById(
-            "playerTeamFilter"
-        );
+    const team =
+        getTeam(teamId);
 
-    if (filter) {
-        filter.value = teamId;
-    }
+    if (!team) return;
 
-    openSection("players");
+    showPage("players");
+
+    document
+        .getElementById("playerTeamFilter")
+        .value = teamId;
 
     renderPlayers();
+
 }
 
-
-/* =========================================================
-   حذف تیم
-   ========================================================= */
 
 function deleteTeam(teamId) {
 
     const team =
         getTeam(teamId);
 
-    if (!team) {
-        return;
-    }
+    if (!team) return;
 
 
     const hasPlayers =
-        players.some(
+        data.players.some(
             player =>
-                String(player.teamId) ===
-                String(teamId)
+                player.teamId === teamId
         );
+
+
+    if (hasPlayers) {
+
+        alert(
+            "ابتدا بازیکنان این تیم را حذف یا به تیم دیگری منتقل کنید."
+        );
+
+        return;
+
+    }
 
 
     const hasMatches =
-        matches.some(
+        data.matches.some(
             match =>
-                String(match.homeId) ===
-                    String(teamId) ||
-                String(match.awayId) ===
-                    String(teamId)
+                match.team1Id === teamId ||
+                match.team2Id === teamId
         );
 
 
-    if (hasPlayers || hasMatches) {
+    if (hasMatches) {
 
-        showToast(
-            "⚠️ ابتدا بازیکنان و مسابقات این تیم را حذف کنید."
+        alert(
+            "این تیم در مسابقه ثبت شده و حذف آن ممکن است اطلاعات مسابقات را خراب کند."
         );
 
         return;
+
     }
 
 
-    const answer =
-        window.confirm(
+    if (
+        !confirm(
             `تیم «${team.name}» حذف شود؟`
-        );
-
-
-    if (!answer) {
+        )
+    ) {
         return;
     }
 
 
-    teams =
-        teams.filter(
+    data.teams =
+        data.teams.filter(
             item =>
-                String(item.id) !==
-                String(teamId)
+                item.id !== teamId
         );
 
 
-    saveAll();
+    saveData();
 
-    renderAll();
+    renderTeams();
 
-    showToast("🗑️ تیم حذف شد.");
+    updateDashboard();
+
+    renderPlayerFilters();
+
+    updateTeamSelects();
+
+    showToast("تیم حذف شد.");
+
 }
 
 
 /* =========================================================
-   فرم بازیکن
-   ========================================================= */
+   PLAYERS
+========================================================= */
 
-const playerForm =
-    document.getElementById("playerForm");
+function openPlayerForm(playerId = "") {
+
+    updateTeamSelects();
 
 
-document
-    .getElementById("openPlayerForm")
-    .addEventListener("click", () => {
+    const modal =
+        document.getElementById("playerModal");
 
-        if (!teams.length) {
 
-            showToast(
-                "⚠️ ابتدا حداقل یک تیم بسازید."
-            );
+    document
+        .getElementById("playerId")
+        .value = playerId;
 
-            openSection("teams");
 
-            return;
-        }
+    document
+        .getElementById("playerImage")
+        .value = "";
 
-        updateTeamSelects();
 
-        playerForm.classList.remove("hidden");
+    const preview =
+        document
+            .getElementById("playerImagePreview");
+
+
+    if (playerId) {
+
+        const player =
+            getPlayer(playerId);
+
+        if (!player) return;
+
+
+        document
+            .getElementById("playerModalTitle")
+            .textContent =
+                "✏️ ویرایش بازیکن";
+
 
         document
             .getElementById("playerName")
-            .focus();
-
-    });
+            .value = player.name;
 
 
-document
-    .getElementById("cancelPlayer")
-    .addEventListener("click", () => {
-
-        playerForm.classList.add("hidden");
-
-        clearPlayerForm();
-
-    });
+        document
+            .getElementById("playerNumber")
+            .value = player.number;
 
 
-document
-    .getElementById("savePlayer")
-    .addEventListener("click", savePlayer);
+        document
+            .getElementById("playerPosition")
+            .value = player.position;
 
 
-document
-    .getElementById("playerPhoto")
-    .addEventListener(
-        "change",
-        previewPlayerPhoto
-    );
+        document
+            .getElementById("playerTeam")
+            .value = player.teamId;
 
 
-function previewPlayerPhoto() {
-
-    const input =
-        document.getElementById("playerPhoto");
-
-    const preview =
-        document.getElementById(
-            "playerPreview"
-        );
-
-    const file =
-        input.files[0];
+        document
+            .getElementById("playerCaptain")
+            .checked =
+                Boolean(player.captain);
 
 
-    if (!file) {
+        if (player.image) {
 
-        preview.innerHTML = "";
+            preview.src =
+                player.image;
 
-        return;
+            preview.classList.remove("hidden");
+
+        } else {
+
+            preview.classList.add("hidden");
+
+        }
+
+    } else {
+
+        document
+            .getElementById("playerModalTitle")
+            .textContent =
+                "➕ افزودن بازیکن";
+
+
+        document
+            .getElementById("playerName")
+            .value = "";
+
+
+        document
+            .getElementById("playerNumber")
+            .value = "";
+
+
+        document
+            .getElementById("playerPosition")
+            .value = "";
+
+
+        document
+            .getElementById("playerTeam")
+            .value = "";
+
+
+        document
+            .getElementById("playerCaptain")
+            .checked = false;
+
+
+        preview.classList.add("hidden");
+
     }
 
 
-    if (!file.type.startsWith("image/")) {
+    modal.classList.add("show");
 
-        preview.innerHTML = "";
-
-        showToast(
-            "❌ فایل انتخاب‌شده عکس نیست."
-        );
-
-        input.value = "";
-
-        return;
-    }
-
-
-    const reader =
-        new FileReader();
-
-
-    reader.onload = () => {
-
-        preview.innerHTML = `
-            <img
-                src="${reader.result}"
-                alt="پیش‌نمایش عکس"
-            >
-        `;
-
-    };
-
-
-    reader.readAsDataURL(file);
 }
 
 
-function savePlayer() {
+async function savePlayer(event) {
+
+    event.preventDefault();
+
+
+    const id =
+        document.getElementById("playerId").value;
+
 
     const name =
         document
@@ -760,973 +812,1282 @@ function savePlayer() {
             .trim();
 
 
-    const teamId =
-        document.getElementById(
-            "playerTeam"
-        ).value;
-
-
     const number =
-        document.getElementById(
-            "playerNumber"
-        ).value;
+        Number(
+            document
+                .getElementById("playerNumber")
+                .value
+        );
 
 
     const position =
-        document.getElementById(
-            "playerPosition"
-        ).value;
+        document
+            .getElementById("playerPosition")
+            .value;
+
+
+    const teamId =
+        document
+            .getElementById("playerTeam")
+            .value;
 
 
     const captain =
-        document.getElementById(
-            "playerCaptain"
-        ).checked;
+        document
+            .getElementById("playerCaptain")
+            .checked;
 
 
-    const photoFile =
-        document.getElementById(
-            "playerPhoto"
-        ).files[0];
+    const imageFile =
+        document
+            .getElementById("playerImage")
+            .files[0];
 
 
-    if (!name) {
+    if (!name || !teamId) {
 
-        showToast(
-            "⚠️ نام بازیکن را وارد کنید."
+        alert(
+            "نام و تیم بازیکن را وارد کنید."
         );
 
         return;
+
     }
 
 
-    if (!teamId) {
+    let image = "";
+
+
+    if (id) {
+
+        const old =
+            getPlayer(id);
+
+        image =
+            old
+                ? old.image || ""
+                : "";
+
+    }
+
+
+    if (imageFile) {
+
+        image =
+            await readImage(imageFile);
+
+    }
+
+
+    /*
+       اگر بازیکن کاپیتان شد،
+       کاپیتانی قبلی همان تیم حذف می‌شود.
+    */
+
+    if (captain) {
+
+        data.players.forEach(player => {
+
+            if (
+                player.teamId === teamId &&
+                player.id !== id
+            ) {
+
+                player.captain = false;
+
+            }
+
+        });
+
+    }
+
+
+    if (id) {
+
+        const player =
+            getPlayer(id);
+
+        player.name = name;
+        player.number = number;
+        player.position = position;
+        player.teamId = teamId;
+        player.captain = captain;
+        player.image = image;
 
         showToast(
-            "⚠️ تیم بازیکن را انتخاب کنید."
+            "اطلاعات بازیکن ویرایش شد."
         );
 
-        return;
+    } else {
+
+        data.players.push({
+
+            id:
+                generateId("player"),
+
+            name,
+
+            number,
+
+            position,
+
+            teamId,
+
+            captain,
+
+            image,
+
+            games: 0,
+
+            assists: 0,
+
+            yellow: 0,
+
+            red: 0,
+
+            createdAt:
+                new Date().toISOString()
+
+        });
+
+        showToast(
+            "بازیکن اضافه شد."
+        );
+
     }
 
 
-    const numberValue =
-        number === ""
-            ? "-"
-            : String(number);
+    saveData();
 
+    closeModal("playerModal");
 
-    readImage(
-        photoFile,
-        image => {
+    renderPlayers();
 
-            /* فقط یک کاپیتان برای هر تیم */
+    updateDashboard();
 
-            if (captain) {
+    renderPlayerFilters();
 
-                players
-                    .filter(
-                        player =>
-                            String(
-                                player.teamId
-                            ) ===
-                            String(teamId)
-                    )
-                    .forEach(player => {
+    renderPlayerStats();
 
-                        player.captain = false;
-
-                    });
-
-            }
-
-
-            players.push({
-
-                id: createId(),
-
-                name: name,
-
-                teamId: teamId,
-
-                number: numberValue,
-
-                position:
-                    position ||
-                    "نامشخص",
-
-                captain: captain,
-
-                photo:
-                    image ||
-                    getDefaultPhoto()
-
-            });
-
-
-            if (!saveAll()) {
-                return;
-            }
-
-
-            renderAll();
-
-            clearPlayerForm();
-
-            playerForm.classList.add(
-                "hidden"
-            );
-
-            showToast(
-                "✅ بازیکن با موفقیت اضافه شد."
-            );
-
-        }
-    );
 }
 
 
-function clearPlayerForm() {
+function renderPlayerFilters() {
 
-    document.getElementById(
-        "playerName"
-    ).value = "";
-
-
-    document.getElementById(
-        "playerTeam"
-    ).value = "";
-
-
-    document.getElementById(
-        "playerNumber"
-    ).value = "";
-
-
-    document.getElementById(
-        "playerPosition"
-    ).value = "دروازه‌بان";
-
-
-    document.getElementById(
-        "playerCaptain"
-    ).checked = false;
-
-
-    document.getElementById(
-        "playerPhoto"
-    ).value = "";
-
-
-    document.getElementById(
-        "playerPreview"
-    ).innerHTML = "";
-}
-
-
-/* =========================================================
-   انتخاب تیم‌ها
-   ========================================================= */
-
-function updateTeamSelects() {
-
-    const playerSelect =
-        document.getElementById(
-            "playerTeam"
-        );
-
-
-    const filter =
+    const select =
         document.getElementById(
             "playerTeamFilter"
         );
 
 
-    const home =
-        document.getElementById(
-            "matchHome"
-        );
+    const current =
+        select.value || "all";
 
 
-    const away =
-        document.getElementById(
-            "matchAway"
-        );
+    select.innerHTML = `
+        <option value="all">
+            همه تیم‌ها
+        </option>
+    `;
 
 
-    const oldFilter =
-        filter
-            ? filter.value
-            : "all";
+    data.teams.forEach(team => {
+
+        select.innerHTML += `
+            <option value="${team.id}">
+                ${escapeHTML(team.name)}
+            </option>
+        `;
+
+    });
 
 
-    const options =
-        teams
-            .map(team => {
+    if (
+        data.teams.some(
+            team =>
+                team.id === current
+        )
+    ) {
 
-                return `
-                    <option value="${escapeHTML(team.id)}">
-                        ${escapeHTML(team.name)}
-                    </option>
-                `;
+        select.value = current;
 
-            })
-            .join("");
+    } else {
 
-
-    if (playerSelect) {
-
-        playerSelect.innerHTML =
-            `
-                <option value="">
-                    انتخاب تیم
-                </option>
-            ` +
-            options;
+        select.value = "all";
 
     }
 
-
-    if (filter) {
-
-        filter.innerHTML =
-            `
-                <option value="all">
-                    همه تیم‌ها
-                </option>
-            ` +
-            options;
-
-
-        const valid =
-            [...filter.options].some(
-                option =>
-                    option.value ===
-                    oldFilter
-            );
-
-
-        if (valid) {
-            filter.value = oldFilter;
-        }
-
-    }
-
-
-    if (home) {
-
-        home.innerHTML =
-            `
-                <option value="">
-                    انتخاب تیم
-                </option>
-            ` +
-            options;
-
-    }
-
-
-    if (away) {
-
-        away.innerHTML =
-            `
-                <option value="">
-                    انتخاب تیم
-                </option>
-            ` +
-            options;
-
-    }
 }
-
-
-/* =========================================================
-   فیلتر و جستجوی بازیکنان
-   ========================================================= */
-
-document
-    .getElementById("playerTeamFilter")
-    .addEventListener(
-        "change",
-        renderPlayers
-    );
-
-
-document
-    .getElementById("playerSearch")
-    .addEventListener(
-        "input",
-        renderPlayers
-    );
 
 
 function renderPlayers() {
 
     const container =
-        document.getElementById(
-            "playersList"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    const filter =
-        document.getElementById(
-            "playerTeamFilter"
-        ).value;
+        document.getElementById("playersList");
 
 
     const search =
-        document.getElementById(
-            "playerSearch"
-        ).value
+        (
+            document
+                .getElementById("playerSearch")
+                ?.value || ""
+        )
             .trim()
             .toLowerCase();
 
 
-    const filtered =
-        players.filter(player => {
+    const filter =
+        document
+            .getElementById("playerTeamFilter")
+            ?.value || "all";
 
-            const teamMatch =
+
+    let players =
+        data.players.filter(player => {
+
+            const matchesSearch =
+                player.name
+                    .toLowerCase()
+                    .includes(search);
+
+
+            const matchesTeam =
                 filter === "all" ||
-                String(player.teamId) ===
-                    String(filter);
-
-
-            const playerName =
-                String(
-                    player.name || ""
-                ).toLowerCase();
-
-
-            const searchMatch =
-                playerName.includes(search);
+                player.teamId === filter;
 
 
             return (
-                teamMatch &&
-                searchMatch
+                matchesSearch &&
+                matchesTeam
             );
 
         });
 
 
-    if (!filtered.length) {
+    if (players.length === 0) {
 
         container.innerHTML = `
-            <div class="empty-state">
+            <div class="empty">
                 بازیکنی پیدا نشد.
             </div>
         `;
 
         return;
+
     }
 
 
     container.innerHTML =
-        filtered
+        players
             .map(player => {
 
-                const team =
-                    getTeam(
-                        player.teamId
-                    );
+                const image =
+                    player.image
+
+                        ? `
+                            <img
+                                class="player-image"
+                                src="${player.image}"
+                                alt="${escapeHTML(player.name)}"
+                            >
+                        `
+
+                        : `
+                            <div class="player-placeholder">
+                                👤
+                            </div>
+                        `;
 
 
                 return `
-                    <article
-                        class="player-card"
-                    >
 
-                        <div
-                            class="jersey-number"
-                        >
-                            ${escapeHTML(
-                                player.number || "-"
-                            )}
+                    <div class="player-card">
+
+                        ${image}
+
+                        <div class="player-info">
+
+                            <span class="player-number">
+                                #${player.number}
+                            </span>
+
+                            <h3>
+                                ${escapeHTML(player.name)}
+                            </h3>
+
+                            <p>
+                                ⚽ ${escapeHTML(player.position)}
+                            </p>
+
+                            <p>
+                                👥 ${escapeHTML(
+                                    getTeamName(player.teamId)
+                                )}
+                            </p>
+
+                            ${
+                                player.captain
+                                    ? `
+                                        <p class="captain">
+                                            👑 کاپیتان
+                                        </p>
+                                    `
+                                    : ""
+                            }
+
+
+                            <div class="card-actions">
+
+                                <button
+                                    class="small-button"
+                                    onclick="openPlayerForm('${player.id}')"
+                                >
+                                    ✏️
+                                </button>
+
+                                <button
+                                    class="small-button danger"
+                                    onclick="deletePlayer('${player.id}')"
+                                >
+                                    🗑️
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                `;
+
+            })
+            .join("");
+
+}
+
+
+function deletePlayer(playerId) {
+
+    const player =
+        getPlayer(playerId);
+
+    if (!player) return;
+
+
+    if (
+        !confirm(
+            `بازیکن «${player.name}» حذف شود؟`
+        )
+    ) {
+        return;
+    }
+
+
+    data.players =
+        data.players.filter(
+            item =>
+                item.id !== playerId
+        );
+
+
+    /*
+       گل‌های ثبت‌شده این بازیکن
+       را حذف نمی‌کنیم؛
+       فقط گلزن خالی می‌شود.
+    */
+
+    data.matches.forEach(match => {
+
+        if (Array.isArray(match.goals)) {
+
+            match.goals.forEach(goal => {
+
+                if (
+                    goal.playerId === playerId
+                ) {
+
+                    goal.playerId = "";
+
+                }
+
+            });
+
+        }
+
+    });
+
+
+    saveData();
+
+    renderPlayers();
+
+    renderPlayerStats();
+
+    renderMatches();
+
+    showToast("بازیکن حذف شد.");
+
+}
+
+
+/* =========================================================
+   TEAM SELECTS
+========================================================= */
+
+function updateTeamSelects() {
+
+    const selects = [
+
+        document.getElementById("playerTeam"),
+
+        document.getElementById("matchTeam1"),
+
+        document.getElementById("matchTeam2")
+
+    ];
+
+
+    selects.forEach(select => {
+
+        if (!select) return;
+
+
+        const current =
+            select.value;
+
+
+        select.innerHTML = `
+            <option value="">
+                انتخاب تیم
+            </option>
+        `;
+
+
+        data.teams.forEach(team => {
+
+            select.innerHTML += `
+                <option value="${team.id}">
+                    ${escapeHTML(team.name)}
+                </option>
+            `;
+
+        });
+
+
+        if (
+            data.teams.some(
+                team =>
+                    team.id === current
+            )
+        ) {
+
+            select.value = current;
+
+        }
+
+    });
+
+}
+
+
+/* =========================================================
+   MATCHES
+========================================================= */
+
+function openMatchForm(matchId = "") {
+
+    updateTeamSelects();
+
+
+    const modal =
+        document.getElementById("matchModal");
+
+
+    document
+        .getElementById("matchId")
+        .value = matchId;
+
+
+    const status =
+        document
+            .getElementById("matchStatus");
+
+
+    if (matchId) {
+
+        const match =
+            data.matches.find(
+                item =>
+                    item.id === matchId
+            );
+
+
+        if (!match) return;
+
+
+        document
+            .getElementById("matchTitle")
+            .value = match.title;
+
+
+        document
+            .getElementById("matchTeam1")
+            .value = match.team1Id;
+
+
+        document
+            .getElementById("matchTeam2")
+            .value = match.team2Id;
+
+
+        document
+            .getElementById("matchDate")
+            .value = match.date;
+
+
+        document
+            .getElementById("matchTime")
+            .value = match.time;
+
+
+        status.value =
+            match.status;
+
+
+        document
+            .getElementById("matchScore1")
+            .value =
+                match.score1 ?? 0;
+
+
+        document
+            .getElementById("matchScore2")
+            .value =
+                match.score2 ?? 0;
+
+
+        renderGoalEditor(
+            match.goals || []
+        );
+
+    } else {
+
+        document
+            .getElementById("matchTitle")
+            .value = "";
+
+
+        document
+            .getElementById("matchTeam1")
+            .value = "";
+
+
+        document
+            .getElementById("matchTeam2")
+            .value = "";
+
+
+        document
+            .getElementById("matchDate")
+            .value = "";
+
+
+        document
+            .getElementById("matchTime")
+            .value = "";
+
+
+        status.value =
+            "scheduled";
+
+
+        document
+            .getElementById("matchScore1")
+            .value = 0;
+
+
+        document
+            .getElementById("matchScore2")
+            .value = 0;
+
+
+        renderGoalEditor([]);
+
+    }
+
+
+    updateMatchResultVisibility();
+
+
+    modal.classList.add("show");
+
+}
+
+
+function updateMatchResultVisibility() {
+
+    const status =
+        document
+            .getElementById("matchStatus")
+            .value;
+
+
+    const box =
+        document
+            .getElementById("matchResultFields");
+
+
+    box.style.display =
+        status === "finished"
+            ? "block"
+            : "none";
+
+}
+
+
+function renderGoalEditor(goals) {
+
+    const container =
+        document.getElementById("goalsEditor");
+
+
+    container.innerHTML = "";
+
+
+    if (
+        !goals ||
+        goals.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    goals.forEach(goal => {
+
+        addGoalRow(
+            goal.teamId || "",
+            goal.playerId || ""
+        );
+
+    });
+
+}
+
+
+function addGoalRow(
+    teamId = "",
+    playerId = ""
+) {
+
+    const container =
+        document.getElementById("goalsEditor");
+
+
+    const row =
+        document.createElement("div");
+
+    row.className =
+        "goal-row";
+
+
+    const teamSelect =
+        document.createElement("select");
+
+    teamSelect.className =
+        "goal-team";
+
+    teamSelect.innerHTML = `
+        <option value="">
+            تیم گل
+        </option>
+    `;
+
+
+    data.teams.forEach(team => {
+
+        teamSelect.innerHTML += `
+            <option value="${team.id}">
+                ${escapeHTML(team.name)}
+            </option>
+        `;
+
+    });
+
+
+    teamSelect.value =
+        teamId;
+
+
+    const playerSelect =
+        document.createElement("select");
+
+    playerSelect.className =
+        "goal-player";
+
+
+    function updatePlayers() {
+
+        playerSelect.innerHTML = `
+            <option value="">
+                گلزن
+            </option>
+        `;
+
+
+        const players =
+            data.players.filter(
+                player =>
+                    player.teamId ===
+                    teamSelect.value
+            );
+
+
+        players.forEach(player => {
+
+            playerSelect.innerHTML += `
+                <option value="${player.id}">
+                    #${player.number} -
+                    ${escapeHTML(player.name)}
+                </option>
+            `;
+
+        });
+
+
+        playerSelect.value =
+            playerId;
+
+    }
+
+
+    teamSelect.addEventListener(
+        "change",
+        () => {
+
+            playerId = "";
+
+            updatePlayers();
+
+        }
+    );
+
+
+    updatePlayers();
+
+
+    const removeButton =
+        document.createElement("button");
+
+    removeButton.type =
+        "button";
+
+    removeButton.className =
+        "remove-goal";
+
+    removeButton.textContent =
+        "✕";
+
+
+    removeButton.onclick =
+        () => {
+
+            row.remove();
+
+        };
+
+
+    row.appendChild(teamSelect);
+
+    row.appendChild(playerSelect);
+
+    row.appendChild(removeButton);
+
+
+    container.appendChild(row);
+
+}
+
+
+function saveMatch(event) {
+
+    event.preventDefault();
+
+
+    const id =
+        document
+            .getElementById("matchId")
+            .value;
+
+
+    const title =
+        document
+            .getElementById("matchTitle")
+            .value
+            .trim();
+
+
+    const team1Id =
+        document
+            .getElementById("matchTeam1")
+            .value;
+
+
+    const team2Id =
+        document
+            .getElementById("matchTeam2")
+            .value;
+
+
+    const date =
+        document
+            .getElementById("matchDate")
+            .value;
+
+
+    const time =
+        document
+            .getElementById("matchTime")
+            .value;
+
+
+    const status =
+        document
+            .getElementById("matchStatus")
+            .value;
+
+
+    const score1 =
+        Number(
+            document
+                .getElementById("matchScore1")
+                .value
+        ) || 0;
+
+
+    const score2 =
+        Number(
+            document
+                .getElementById("matchScore2")
+                .value
+        ) || 0;
+
+
+    if (team1Id === team2Id) {
+
+        alert(
+            "دو تیم مسابقه باید متفاوت باشند."
+        );
+
+        return;
+
+    }
+
+
+    const goalRows =
+        document
+            .querySelectorAll(
+                "#goalsEditor .goal-row"
+            );
+
+
+    const goals = [];
+
+
+    goalRows.forEach(row => {
+
+        const team =
+            row.querySelector(
+                ".goal-team"
+            ).value;
+
+
+        const player =
+            row.querySelector(
+                ".goal-player"
+            ).value;
+
+
+        if (team) {
+
+            goals.push({
+
+                id:
+                    generateId("goal"),
+
+                teamId: team,
+
+                playerId: player
+
+            });
+
+        }
+
+    });
+
+
+    if (status === "finished") {
+
+        const totalGoals =
+            score1 + score2;
+
+
+        if (
+            goals.length !==
+            totalGoals
+        ) {
+
+            const continueAnyway =
+                confirm(
+                    `نتیجه ${totalGoals} گل دارد ولی ${goals.length} گلزن ثبت شده است.\n\nآیا با همین اطلاعات ذخیره شود؟`
+                );
+
+
+            if (!continueAnyway) {
+                return;
+            }
+
+        }
+
+    }
+
+
+    if (id) {
+
+        const match =
+            data.matches.find(
+                item =>
+                    item.id === id
+            );
+
+
+        if (!match) return;
+
+
+        match.title = title;
+        match.team1Id = team1Id;
+        match.team2Id = team2Id;
+        match.date = date;
+        match.time = time;
+        match.status = status;
+        match.score1 = score1;
+        match.score2 = score2;
+        match.goals = goals;
+
+
+        showToast(
+            "مسابقه ویرایش شد."
+        );
+
+    } else {
+
+        data.matches.push({
+
+            id:
+                generateId("match"),
+
+            title,
+
+            team1Id,
+
+            team2Id,
+
+            date,
+
+            time,
+
+            status,
+
+            score1,
+
+            score2,
+
+            goals,
+
+            createdAt:
+                new Date().toISOString()
+
+        });
+
+
+        showToast(
+            "مسابقه اضافه شد."
+        );
+
+    }
+
+
+    saveData();
+
+    closeModal("matchModal");
+
+    renderMatches();
+
+    renderStandings();
+
+    renderPlayerStats();
+
+    renderResults();
+
+    updateDashboard();
+
+}
+
+
+function renderMatches() {
+
+    const container =
+        document.getElementById("matchesList");
+
+
+    if (data.matches.length === 0) {
+
+        container.innerHTML = `
+            <div class="empty">
+                هنوز مسابقه‌ای ثبت نشده است.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    const matches =
+        [...data.matches]
+            .sort(
+                (a, b) =>
+                    new Date(
+                        `${a.date}T${a.time}`
+                    )
+                    -
+                    new Date(
+                        `${b.date}T${b.time}`
+                    )
+            );
+
+
+    container.innerHTML =
+        matches
+            .map(match => {
+
+                const team1 =
+                    getTeam(match.team1Id);
+
+                const team2 =
+                    getTeam(match.team2Id);
+
+
+                return `
+
+                    <div class="match-card">
+
+                        <div class="match-header">
+
+                            <h3>
+                                🏆 ${escapeHTML(match.title)}
+                            </h3>
+
+                            <span
+                                class="status ${match.status}"
+                            >
+                                ${
+                                    match.status ===
+                                    "finished"
+                                        ? "پایان‌یافته"
+                                        : "برنامه‌ریزی‌شده"
+                                }
+                            </span>
+
                         </div>
 
 
-                        <img
-                            class="player-photo"
-                            src="${
-                                player.photo ||
-                                getDefaultPhoto()
-                            }"
-                            alt="${escapeHTML(
-                                player.name
-                            )}"
-                        >
+                        <div class="match-teams">
+
+                            <div class="match-team">
+
+                                ${
+                                    team1?.image
+                                        ? `
+                                            <img
+                                                src="${team1.image}"
+                                                class="team-logo"
+                                                alt=""
+                                            >
+                                        `
+                                        : "⚽"
+                                }
+
+                                <br>
+
+                                ${escapeHTML(
+                                    team1?.name ||
+                                    "تیم اول"
+                                )}
+
+                            </div>
 
 
-                        <h3>
-                            ${escapeHTML(
-                                player.name
-                            )}
-                        </h3>
+                            <div class="match-score">
+
+                                ${
+                                    match.status ===
+                                    "finished"
+
+                                        ? `
+                                            ${match.score1}
+                                            -
+                                            ${match.score2}
+                                        `
+
+                                        : "VS"
+                                }
+
+                            </div>
+
+
+                            <div class="match-team">
+
+                                ${
+                                    team2?.image
+                                        ? `
+                                            <img
+                                                src="${team2.image}"
+                                                class="team-logo"
+                                                alt=""
+                                            >
+                                        `
+                                        : "⚽"
+                                }
+
+                                <br>
+
+                                ${escapeHTML(
+                                    team2?.name ||
+                                    "تیم دوم"
+                                )}
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="match-date">
+
+                            📅 ${formatDate(match.date)}
+
+                            <br>
+
+                            ⏰ ${match.time}
+
+                        </div>
 
 
                         ${
-                            player.captain
+                            match.status ===
+                            "finished"
+
                                 ? `
-                                    <span class="captain">
-                                        🧑‍✈️ کاپیتان
-                                    </span>
+                                    <p>
+                                        ⚽
+                                        ${match.goals?.length || 0}
+                                        گل ثبت شده
+                                    </p>
                                 `
                                 : ""
                         }
 
 
-                        <div class="player-info">
-
-                            👕
-                            ${escapeHTML(
-                                team
-                                    ? team.name
-                                    : "بدون تیم"
-                            )}
-
-                            <br>
-
-                            ⚽
-                            ${escapeHTML(
-                                player.position ||
-                                "نامشخص"
-                            )}
-
-                        </div>
-
-
-                        <div class="card-buttons">
+                        <div class="card-actions">
 
                             <button
-                                class="small-btn delete-btn player-delete-btn"
-                                data-player-id="${escapeHTML(
-                                    player.id
-                                )}"
+                                class="small-button"
+                                onclick="openMatchForm('${match.id}')"
+                            >
+                                ✏️ ویرایش
+                            </button>
+
+                            <button
+                                class="small-button danger"
+                                onclick="deleteMatch('${match.id}')"
                             >
                                 🗑️ حذف
                             </button>
 
                         </div>
 
-                    </article>
+                    </div>
+
                 `;
 
             })
             .join("");
 
-
-    container
-        .querySelectorAll(
-            ".player-delete-btn"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    deletePlayer(
-                        button.dataset.playerId
-                    );
-
-                }
-            );
-
-        });
 }
 
-
-/* =========================================================
-   حذف بازیکن
-   ========================================================= */
-
-function deletePlayer(playerId) {
-
-    const player =
-        players.find(
-            item =>
-                String(item.id) ===
-                String(playerId)
-        );
-
-
-    if (!player) {
-        return;
-    }
-
-
-    const answer =
-        window.confirm(
-            `بازیکن «${player.name}» حذف شود؟`
-        );
-
-
-    if (!answer) {
-        return;
-    }
-
-
-    players =
-        players.filter(
-            item =>
-                String(item.id) !==
-                String(playerId)
-        );
-
-
-    saveAll();
-
-    renderAll();
-
-    showToast("🗑️ بازیکن حذف شد.");
-}
-
-
-/* =========================================================
-   مسابقات
-   ========================================================= */
-
-const matchForm =
-    document.getElementById(
-        "matchForm"
-    );
-
-
-document
-    .getElementById("openMatchForm")
-    .addEventListener("click", () => {
-
-        if (teams.length < 2) {
-
-            showToast(
-                "⚠️ برای مسابقه حداقل دو تیم لازم است."
-            );
-
-            openSection("teams");
-
-            return;
-        }
-
-
-        updateTeamSelects();
-
-        matchForm.classList.remove(
-            "hidden"
-        );
-
-    });
-
-
-document
-    .getElementById("cancelMatch")
-    .addEventListener("click", () => {
-
-        matchForm.classList.add(
-            "hidden"
-        );
-
-        clearMatchForm();
-
-    });
-
-
-document
-    .getElementById("saveMatch")
-    .addEventListener(
-        "click",
-        saveMatch
-    );
-
-
-function saveMatch() {
-
-    const homeId =
-        document.getElementById(
-            "matchHome"
-        ).value;
-
-
-    const awayId =
-        document.getElementById(
-            "matchAway"
-        ).value;
-
-
-    const homeScore =
-        Number(
-            document.getElementById(
-                "homeScore"
-            ).value
-        );
-
-
-    const awayScore =
-        Number(
-            document.getElementById(
-                "awayScore"
-            ).value
-        );
-
-
-    const date =
-        document.getElementById(
-            "matchDate"
-        ).value;
-
-
-    const finished =
-        document.getElementById(
-            "matchFinished"
-        ).checked;
-
-
-    if (!homeId || !awayId) {
-
-        showToast(
-            "⚠️ هر دو تیم را انتخاب کنید."
-        );
-
-        return;
-    }
-
-
-    if (homeId === awayId) {
-
-        showToast(
-            "⚠️ یک تیم نمی‌تواند با خودش بازی کند."
-        );
-
-        return;
-    }
-
-
-    if (
-        !Number.isInteger(homeScore) ||
-        !Number.isInteger(awayScore) ||
-        homeScore < 0 ||
-        awayScore < 0
-    ) {
-
-        showToast(
-            "⚠️ نتیجه مسابقه صحیح نیست."
-        );
-
-        return;
-    }
-
-
-    const match = {
-
-        id: createId(),
-
-        homeId: homeId,
-
-        awayId: awayId,
-
-        homeScore: homeScore,
-
-        awayScore: awayScore,
-
-        date:
-            date ||
-            new Date()
-                .toISOString()
-                .slice(0, 10),
-
-        finished:
-            finished === true
-
-    };
-
-
-    matches.push(match);
-
-
-    if (!saveAll()) {
-        return;
-    }
-
-
-    renderAll();
-
-    clearMatchForm();
-
-    matchForm.classList.add(
-        "hidden"
-    );
-
-
-    showToast(
-        "✅ مسابقه با موفقیت ثبت شد."
-    );
-}
-
-
-function clearMatchForm() {
-
-    document.getElementById(
-        "matchHome"
-    ).value = "";
-
-
-    document.getElementById(
-        "matchAway"
-    ).value = "";
-
-
-    document.getElementById(
-        "homeScore"
-    ).value = "0";
-
-
-    document.getElementById(
-        "awayScore"
-    ).value = "0";
-
-
-    document.getElementById(
-        "matchDate"
-    ).value = "";
-
-
-    document.getElementById(
-        "matchFinished"
-    ).checked = true;
-}
-
-
-/* =========================================================
-   نمایش مسابقات
-   ========================================================= */
-
-function renderMatches() {
-
-    const container =
-        document.getElementById(
-            "matchesList"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    if (!matches.length) {
-
-        container.innerHTML = `
-            <div class="empty-state">
-                هنوز مسابقه‌ای ثبت نشده است.
-            </div>
-        `;
-
-        return;
-    }
-
-
-    const sortedMatches =
-        [...matches].sort(
-            (a, b) => {
-
-                const dateA =
-                    new Date(
-                        a.date || 0
-                    ).getTime();
-
-                const dateB =
-                    new Date(
-                        b.date || 0
-                    ).getTime();
-
-                return dateB - dateA;
-
-            }
-        );
-
-
-    container.innerHTML =
-        sortedMatches
-            .map(match => {
-
-                const home =
-                    getTeam(
-                        match.homeId
-                    );
-
-
-                const away =
-                    getTeam(
-                        match.awayId
-                    );
-
-
-                return `
-                    <article
-                        class="match-card"
-                    >
-
-                        <div
-                            class="match-teams"
-                        >
-
-                            <strong>
-                                ${escapeHTML(
-                                    home
-                                        ? home.name
-                                        : "تیم حذف‌شده"
-                                )}
-                            </strong>
-
-
-                            <div
-                                class="match-score"
-                            >
-                                ${
-                                    match.finished
-                                        ? `${Number(
-                                            match.homeScore
-                                          )} - ${Number(
-                                            match.awayScore
-                                          )}`
-                                        : "VS"
-                                }
-                            </div>
-
-
-                            <strong>
-                                ${escapeHTML(
-                                    away
-                                        ? away.name
-                                        : "تیم حذف‌شده"
-                                )}
-                            </strong>
-
-                        </div>
-
-
-                        <div
-                            class="match-date"
-                        >
-                            📅
-                            ${escapeHTML(
-                                match.date ||
-                                "بدون تاریخ"
-                            )}
-                        </div>
-
-
-                        <div
-                            class="card-buttons"
-                        >
-
-                            <button
-                                class="small-btn delete-btn match-delete-btn"
-                                data-match-id="${escapeHTML(
-                                    match.id
-                                )}"
-                            >
-                                🗑️ حذف مسابقه
-                            </button>
-
-                        </div>
-
-                    </article>
-                `;
-
-            })
-            .join("");
-
-
-    container
-        .querySelectorAll(
-            ".match-delete-btn"
-        )
-        .forEach(button => {
-
-            button.addEventListener(
-                "click",
-                () => {
-
-                    deleteMatch(
-                        button.dataset.matchId
-                    );
-
-                }
-            );
-
-        });
-}
-
-
-/* =========================================================
-   حذف مسابقه
-   ========================================================= */
 
 function deleteMatch(matchId) {
 
     const match =
-        matches.find(
+        data.matches.find(
             item =>
-                String(item.id) ===
-                String(matchId)
+                item.id === matchId
         );
 
 
-    if (!match) {
-        return;
-    }
+    if (!match) return;
 
 
-    const answer =
-        window.confirm(
+    if (
+        !confirm(
             "این مسابقه حذف شود؟"
-        );
-
-
-    if (!answer) {
+        )
+    ) {
         return;
     }
 
 
-    matches =
-        matches.filter(
+    data.matches =
+        data.matches.filter(
             item =>
-                String(item.id) !==
-                String(matchId)
+                item.id !== matchId
         );
 
 
-    saveAll();
+    saveData();
 
-    renderAll();
+    renderMatches();
+
+    renderStandings();
+
+    renderPlayerStats();
+
+    renderResults();
+
+    updateDashboard();
 
     showToast(
-        "🗑️ مسابقه حذف شد."
+        "مسابقه حذف شد."
     );
+
 }
 
 
 /* =========================================================
-   محاسبه جدول
-   ========================================================= */
+   STANDINGS
+========================================================= */
 
 function calculateStandings() {
 
-    const table = {};
+    const table =
+        data.teams.map(team => ({
 
+            teamId: team.id,
 
-    teams.forEach(team => {
+            team: team.name,
 
-        table[team.id] = {
-
-            id: team.id,
-
-            played: 0,
+            games: 0,
 
             wins: 0,
 
@@ -1738,25 +2099,34 @@ function calculateStandings() {
 
             goalsAgainst: 0,
 
+            goalDiff: 0,
+
             points: 0
 
-        };
-
-    });
+        }));
 
 
-    matches
+    data.matches
         .filter(
             match =>
-                match.finished === true
+                match.status === "finished"
         )
         .forEach(match => {
 
             const home =
-                table[match.homeId];
+                table.find(
+                    item =>
+                        item.teamId ===
+                        match.team1Id
+                );
+
 
             const away =
-                table[match.awayId];
+                table.find(
+                    item =>
+                        item.teamId ===
+                        match.team2Id
+                );
 
 
             if (!home || !away) {
@@ -1764,71 +2134,47 @@ function calculateStandings() {
             }
 
 
-            const homeScore =
-                Number(match.homeScore);
+            const score1 =
+                Number(match.score1) || 0;
 
 
-            const awayScore =
-                Number(match.awayScore);
+            const score2 =
+                Number(match.score2) || 0;
 
 
-            if (
-                !Number.isFinite(homeScore) ||
-                !Number.isFinite(awayScore)
-            ) {
-                return;
-            }
+            home.games++;
+            away.games++;
 
 
-            home.played++;
+            home.goalsFor += score1;
+            home.goalsAgainst += score2;
 
-            away.played++;
-
-
-            home.goalsFor +=
-                homeScore;
-
-            home.goalsAgainst +=
-                awayScore;
+            away.goalsFor += score2;
+            away.goalsAgainst += score1;
 
 
-            away.goalsFor +=
-                awayScore;
-
-            away.goalsAgainst +=
-                homeScore;
-
-
-            if (
-                homeScore >
-                awayScore
-            ) {
+            if (score1 > score2) {
 
                 home.wins++;
+                home.points += 3;
 
                 away.losses++;
 
-                home.points += 3;
-
             } else if (
-                homeScore <
-                awayScore
+                score2 > score1
             ) {
 
                 away.wins++;
+                away.points += 3;
 
                 home.losses++;
-
-                away.points += 3;
 
             } else {
 
                 home.draws++;
-
                 away.draws++;
 
                 home.points++;
-
                 away.points++;
 
             }
@@ -1836,350 +2182,945 @@ function calculateStandings() {
         });
 
 
-    return Object.values(table)
-        .sort((a, b) => {
+    table.forEach(item => {
 
-            /* امتیاز */
+        item.goalDiff =
+            item.goalsFor -
+            item.goalsAgainst;
 
-            if (
-                b.points !==
+    });
+
+
+    table.sort((a, b) => {
+
+        if (
+            b.points !==
+            a.points
+        ) {
+
+            return (
+                b.points -
                 a.points
-            ) {
-                return (
-                    b.points -
-                    a.points
-                );
-            }
-
-
-            /* تفاضل گل */
-
-            const diffA =
-                a.goalsFor -
-                a.goalsAgainst;
-
-
-            const diffB =
-                b.goalsFor -
-                b.goalsAgainst;
-
-
-            if (
-                diffB !==
-                diffA
-            ) {
-
-                return (
-                    diffB -
-                    diffA
-                );
-
-            }
-
-
-            /* گل زده */
-
-            if (
-                b.goalsFor !==
-                a.goalsFor
-            ) {
-
-                return (
-                    b.goalsFor -
-                    a.goalsFor
-                );
-
-            }
-
-
-            /* نام تیم */
-
-            const teamA =
-                getTeam(a.id);
-
-            const teamB =
-                getTeam(b.id);
-
-
-            return String(
-                teamA
-                    ? teamA.name
-                    : ""
-            ).localeCompare(
-                String(
-                    teamB
-                        ? teamB.name
-                        : ""
-                ),
-                "fa"
             );
 
-        });
+        }
+
+
+        if (
+            b.goalDiff !==
+            a.goalDiff
+        ) {
+
+            return (
+                b.goalDiff -
+                a.goalDiff
+            );
+
+        }
+
+
+        return (
+            b.goalsFor -
+            a.goalsFor
+        );
+
+    });
+
+
+    return table;
+
 }
 
 
-/* =========================================================
-   نمایش جدول
-   ========================================================= */
+function renderStandings() {
 
-function renderTable() {
-
-    const body =
+    const container =
         document.getElementById(
-            "standingsBody"
+            "standings"
         );
 
 
-    if (!body) {
-        return;
-    }
-
-
-    const standings =
+    const table =
         calculateStandings();
 
 
-    if (!standings.length) {
+    if (table.length === 0) {
 
-        body.innerHTML = `
+        container.innerHTML = `
             <tr>
-                <td colspan="8">
+                <td colspan="10">
                     هنوز تیمی ثبت نشده است.
                 </td>
             </tr>
         `;
 
         return;
+
     }
 
 
-    body.innerHTML =
-        standings
-            .map(
-                (item, index) => {
+    container.innerHTML =
+        table
+            .map((team, index) => `
 
-                    const team =
-                        getTeam(item.id);
+                <tr>
 
+                    <td>
+                        ${index + 1}
+                    </td>
 
-                    const logo =
-                        team &&
-                        team.logo
-                            ? team.logo
-                            : getDefaultPhoto();
+                    <td>
+                        <strong>
+                            ${escapeHTML(team.team)}
+                        </strong>
+                    </td>
 
+                    <td>
+                        ${team.games}
+                    </td>
 
-                    const name =
-                        team
-                            ? team.name
-                            : "تیم حذف‌شده";
+                    <td>
+                        ${team.wins}
+                    </td>
 
+                    <td>
+                        ${team.draws}
+                    </td>
 
-                    return `
-                        <tr>
+                    <td>
+                        ${team.losses}
+                    </td>
 
-                            <td>
-                                ${index + 1}
-                            </td>
+                    <td>
+                        ${team.goalsFor}
+                    </td>
 
+                    <td>
+                        ${team.goalsAgainst}
+                    </td>
 
-                            <td>
-                                <div
-                                    class="team-cell"
-                                >
+                    <td>
+                        ${team.goalDiff}
+                    </td>
 
-                                    <img
-                                        class="table-logo"
-                                        src="${logo}"
-                                        alt=""
-                                    >
+                    <td>
+                        <strong>
+                            ${team.points}
+                        </strong>
+                    </td>
 
-                                    <strong>
-                                        ${escapeHTML(
-                                            name
-                                        )}
-                                    </strong>
+                </tr>
 
-                                </div>
-                            </td>
-
-
-                            <td>
-                                ${item.played}
-                            </td>
-
-
-                            <td>
-                                ${item.wins}
-                            </td>
-
-
-                            <td>
-                                ${item.draws}
-                            </td>
-
-
-                            <td>
-                                ${item.losses}
-                            </td>
-
-
-                            <td>
-                                ${item.goalsFor}
-                                :
-                                ${item.goalsAgainst}
-                            </td>
-
-
-                            <td>
-                                <strong>
-                                    ${item.points}
-                                </strong>
-                            </td>
-
-                        </tr>
-                    `;
-
-                }
-            )
+            `)
             .join("");
+
 }
 
 
 /* =========================================================
-   خروجی اطلاعات
-   ========================================================= */
+   PLAYER STATS
+========================================================= */
 
-document
-    .getElementById("exportData")
-    .addEventListener(
-        "click",
-        exportData
+function calculatePlayerStats() {
+
+    const stats =
+        data.players.map(player => ({
+
+            ...player,
+
+            games: 0,
+
+            goals: 0,
+
+            assists:
+                Number(player.assists) || 0,
+
+            yellow:
+                Number(player.yellow) || 0,
+
+            red:
+                Number(player.red) || 0
+
+        }));
+
+
+    const finishedMatches =
+        data.matches.filter(
+            match =>
+                match.status === "finished"
+        );
+
+
+    finishedMatches.forEach(match => {
+
+        const involvedTeams = [
+            match.team1Id,
+            match.team2Id
+        ];
+
+
+        stats.forEach(player => {
+
+            if (
+                involvedTeams.includes(
+                    player.teamId
+                )
+            ) {
+
+                player.games++;
+
+            }
+
+        });
+
+
+        (match.goals || [])
+            .forEach(goal => {
+
+                const player =
+                    stats.find(
+                        item =>
+                            item.id ===
+                            goal.playerId
+                    );
+
+
+                if (player) {
+
+                    player.goals++;
+
+                }
+
+            });
+
+    });
+
+
+    return stats;
+
+}
+
+
+function renderPlayerStats() {
+
+    const container =
+        document.getElementById(
+            "playerStats"
+        );
+
+
+    const stats =
+        calculatePlayerStats()
+            .sort(
+                (a, b) =>
+                    b.goals -
+                    a.goals
+            );
+
+
+    if (stats.length === 0) {
+
+        container.innerHTML = `
+            <tr>
+                <td colspan="9">
+                    هنوز بازیکنی ثبت نشده است.
+                </td>
+            </tr>
+        `;
+
+        document
+            .getElementById(
+                "topScorerName"
+            )
+            .textContent = "-";
+
+        document
+            .getElementById(
+                "topScorerGoals"
+            )
+            .textContent = "0";
+
+        return;
+
+    }
+
+
+    const top =
+        stats[0];
+
+
+    document
+        .getElementById(
+            "topScorerName"
+        )
+        .textContent =
+            top.name;
+
+
+    document
+        .getElementById(
+            "topScorerGoals"
+        )
+        .textContent =
+            top.goals;
+
+
+    container.innerHTML =
+        stats
+            .map(player => `
+
+                <tr>
+
+                    <td>
+                        ${escapeHTML(player.name)}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            getTeamName(
+                                player.teamId
+                            )
+                        )}
+                    </td>
+
+                    <td>
+                        #${player.number}
+                    </td>
+
+                    <td>
+                        ${escapeHTML(
+                            player.position
+                        )}
+                    </td>
+
+                    <td>
+                        ${player.games}
+                    </td>
+
+                    <td>
+                        <strong>
+                            ${player.goals}
+                        </strong>
+                    </td>
+
+                    <td>
+                        ${player.assists}
+                    </td>
+
+                    <td>
+                        ${player.yellow}
+                    </td>
+
+                    <td>
+                        ${player.red}
+                    </td>
+
+                </tr>
+
+            `)
+            .join("");
+
+}
+
+
+/* =========================================================
+   RESULTS
+========================================================= */
+
+function renderResults() {
+
+    const container =
+        document.getElementById(
+            "resultsList"
+        );
+
+
+    const results =
+        data.matches.filter(
+            match =>
+                match.status ===
+                "finished"
+        );
+
+
+    if (results.length === 0) {
+
+        container.innerHTML = `
+            <div class="empty">
+                هنوز نتیجه‌ای ثبت نشده است.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        results
+            .map(match => `
+
+                <div class="result-card">
+
+                    <h3>
+                        🏆
+                        ${escapeHTML(match.title)}
+                    </h3>
+
+                    <div class="match-teams">
+
+                        <div class="match-team">
+
+                            ${escapeHTML(
+                                getTeamName(
+                                    match.team1Id
+                                )
+                            )}
+
+                        </div>
+
+                        <div class="match-score">
+
+                            ${match.score1}
+                            -
+                            ${match.score2}
+
+                        </div>
+
+                        <div class="match-team">
+
+                            ${escapeHTML(
+                                getTeamName(
+                                    match.team2Id
+                                )
+                            )}
+
+                        </div>
+
+                    </div>
+
+                    <div class="match-date">
+
+                        📅
+                        ${formatDate(match.date)}
+
+                        <br>
+
+                        ⏰
+                        ${match.time}
+
+                    </div>
+
+                </div>
+
+            `)
+            .join("");
+
+}
+
+
+/* =========================================================
+   NEWS
+========================================================= */
+
+function openNewsForm(newsId = "") {
+
+    document
+        .getElementById("newsId")
+        .value = newsId;
+
+
+    if (newsId) {
+
+        const item =
+            data.news.find(
+                news =>
+                    news.id === newsId
+            );
+
+
+        if (!item) return;
+
+
+        document
+            .getElementById("newsTitle")
+            .value =
+                item.title;
+
+
+        document
+            .getElementById("newsText")
+            .value =
+                item.text;
+
+    } else {
+
+        document
+            .getElementById("newsTitle")
+            .value = "";
+
+
+        document
+            .getElementById("newsText")
+            .value = "";
+
+    }
+
+
+    document
+        .getElementById("newsModal")
+        .classList.add("show");
+
+}
+
+
+function saveNews(event) {
+
+    event.preventDefault();
+
+
+    const id =
+        document
+            .getElementById("newsId")
+            .value;
+
+
+    const title =
+        document
+            .getElementById("newsTitle")
+            .value
+            .trim();
+
+
+    const text =
+        document
+            .getElementById("newsText")
+            .value
+            .trim();
+
+
+    if (id) {
+
+        const item =
+            data.news.find(
+                news =>
+                    news.id === id
+            );
+
+
+        item.title = title;
+
+        item.text = text;
+
+
+        showToast(
+            "اطلاعیه ویرایش شد."
+        );
+
+    } else {
+
+        data.news.unshift({
+
+            id:
+                generateId("news"),
+
+            title,
+
+            text,
+
+            date:
+                new Date().toISOString()
+
+        });
+
+
+        showToast(
+            "اطلاعیه اضافه شد."
+        );
+
+    }
+
+
+    saveData();
+
+    closeModal("newsModal");
+
+    renderNews();
+
+}
+
+
+function renderNews() {
+
+    const container =
+        document.getElementById(
+            "newsList"
+        );
+
+
+    if (data.news.length === 0) {
+
+        container.innerHTML = `
+            <div class="empty">
+                هنوز اطلاعیه‌ای ثبت نشده است.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        data.news
+            .map(item => `
+
+                <div class="news-card">
+
+                    <h3>
+                        📢
+                        ${escapeHTML(item.title)}
+                    </h3>
+
+                    <p>
+                        ${escapeHTML(item.text)}
+                    </p>
+
+                    <small>
+                        📅
+                        ${new Date(
+                            item.date
+                        ).toLocaleDateString("fa-IR")}
+                    </small>
+
+
+                    <div class="card-actions">
+
+                        <button
+                            class="small-button"
+                            onclick="openNewsForm('${item.id}')"
+                        >
+                            ✏️ ویرایش
+                        </button>
+
+                        <button
+                            class="small-button danger"
+                            onclick="deleteNews('${item.id}')"
+                        >
+                            🗑️ حذف
+                        </button>
+
+                    </div>
+
+                </div>
+
+            `)
+            .join("");
+
+}
+
+
+function deleteNews(newsId) {
+
+    if (
+        !confirm(
+            "این اطلاعیه حذف شود؟"
+        )
+    ) {
+        return;
+    }
+
+
+    data.news =
+        data.news.filter(
+            item =>
+                item.id !== newsId
+        );
+
+
+    saveData();
+
+    renderNews();
+
+    showToast(
+        "اطلاعیه حذف شد."
     );
 
-
-function exportData() {
-
-    const data = {
-
-        version: 2,
-
-        exportedAt:
-            new Date().toISOString(),
-
-        teams: teams,
-
-        players: players,
-
-        matches: matches
-
-    };
-
-
-    try {
-
-        const json =
-            JSON.stringify(
-                data,
-                null,
-                2
-            );
-
-
-        const blob =
-            new Blob(
-                [json],
-                {
-                    type:
-                        "application/json;charset=utf-8"
-                }
-            );
-
-
-        const url =
-            URL.createObjectURL(
-                blob
-            );
-
-
-        const link =
-            document.createElement(
-                "a"
-            );
-
-
-        link.href = url;
-
-        link.download =
-            "tournament-backup.json";
-
-
-        document.body.appendChild(
-            link
-        );
-
-
-        link.click();
-
-
-        link.remove();
-
-
-        setTimeout(() => {
-
-            URL.revokeObjectURL(
-                url
-            );
-
-        }, 500);
-
-
-        showToast(
-            "📦 فایل پشتیبان آماده شد."
-        );
-
-
-    } catch (error) {
-
-        console.error(error);
-
-        showToast(
-            "❌ ساخت فایل پشتیبان انجام نشد."
-        );
-
-    }
 }
 
 
 /* =========================================================
-   وارد کردن اطلاعات
-   ========================================================= */
+   MODALS
+========================================================= */
 
-document
-    .getElementById("importData")
-    .addEventListener(
-        "click",
-        () => {
+function closeModal(modalId) {
 
-            document
-                .getElementById(
-                    "importFile"
-                )
-                .click();
+    document
+        .getElementById(modalId)
+        .classList.remove("show");
+
+}
+
+
+document.addEventListener(
+    "click",
+    event => {
+
+        if (
+            event.target.classList.contains(
+                "modal"
+            )
+        ) {
+
+            event.target.classList.remove(
+                "show"
+            );
 
         }
+
+    }
+);
+
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+function updateDashboard() {
+
+    document
+        .getElementById("homeTeams")
+        .textContent =
+            data.teams.length;
+
+
+    document
+        .getElementById("homePlayers")
+        .textContent =
+            data.players.length;
+
+
+    document
+        .getElementById("homeMatches")
+        .textContent =
+            data.matches.length;
+
+
+    const goals =
+        data.matches
+            .filter(
+                match =>
+                    match.status ===
+                    "finished"
+            )
+            .reduce(
+                (sum, match) =>
+                    sum +
+                    Number(match.score1 || 0) +
+                    Number(match.score2 || 0),
+                0
+            );
+
+
+    document
+        .getElementById("homeGoals")
+        .textContent =
+            goals;
+
+
+    renderNextMatch();
+
+}
+
+
+function renderNextMatch() {
+
+    const container =
+        document.getElementById(
+            "nextMatch"
+        );
+
+
+    const upcoming =
+        data.matches
+            .filter(
+                match =>
+                    match.status ===
+                    "scheduled"
+            )
+            .sort(
+                (a, b) =>
+                    new Date(
+                        `${a.date}T${a.time}`
+                    )
+                    -
+                    new Date(
+                        `${b.date}T${b.time}`
+                    )
+            );
+
+
+    if (upcoming.length === 0) {
+
+        container.textContent =
+            "مسابقه آینده‌ای ثبت نشده است.";
+
+        return;
+
+    }
+
+
+    const match =
+        upcoming[0];
+
+
+    container.innerHTML = `
+
+        <div class="match-card">
+
+            <h3>
+                ${escapeHTML(match.title)}
+            </h3>
+
+            <div class="match-teams">
+
+                <div class="match-team">
+
+                    ${escapeHTML(
+                        getTeamName(
+                            match.team1Id
+                        )
+                    )}
+
+                </div>
+
+                <strong>
+                    VS
+                </strong>
+
+                <div class="match-team">
+
+                    ${escapeHTML(
+                        getTeamName(
+                            match.team2Id
+                        )
+                    )}
+
+                </div>
+
+            </div>
+
+            <div class="match-date">
+
+                📅
+                ${formatDate(match.date)}
+
+                <br>
+
+                ⏰
+                ${match.time}
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =========================================================
+   PRINT
+========================================================= */
+
+function printInformation() {
+
+    buildPrintReport();
+
+    window.print();
+
+}
+
+
+function buildPrintReport() {
+
+    /*
+       اطلاعات اصلی قبل از چاپ
+       در صفحات مختلف دیده می‌شوند.
+    */
+
+    renderTeams();
+
+    renderPlayers();
+
+    renderMatches();
+
+    renderStandings();
+
+    renderPlayerStats();
+
+    renderResults();
+
+    renderNews();
+
+}
+
+
+/* =========================================================
+   BACKUP
+========================================================= */
+
+function backupData() {
+
+    const json =
+        JSON.stringify(
+            data,
+            null,
+            2
+        );
+
+
+    const blob =
+        new Blob(
+            [json],
+            {
+                type:
+                    "application/json"
+            }
+        );
+
+
+    const url =
+        URL.createObjectURL(blob);
+
+
+    const a =
+        document.createElement("a");
+
+
+    a.href = url;
+
+    a.download =
+        "community-tournament-backup.json";
+
+
+    document.body.appendChild(a);
+
+    a.click();
+
+    a.remove();
+
+    URL.revokeObjectURL(url);
+
+
+    showToast(
+        "فایل پشتیبان ساخته شد."
     );
 
-
-document
-    .getElementById("importFile")
-    .addEventListener(
-        "change",
-        importData
-    );
+}
 
 
-function importData(event) {
+function restoreData(event) {
 
     const file =
         event.target.files[0];
@@ -2194,318 +3135,134 @@ function importData(event) {
         new FileReader();
 
 
-    reader.onload = () => {
+    reader.onload =
+        function () {
 
-        try {
+            try {
 
-            const data =
-                JSON.parse(
-                    reader.result
+                const restored =
+                    JSON.parse(
+                        reader.result
+                    );
+
+
+                if (
+                    !restored ||
+                    !Array.isArray(
+                        restored.teams
+                    ) ||
+                    !Array.isArray(
+                        restored.players
+                    ) ||
+                    !Array.isArray(
+                        restored.matches
+                    ) ||
+                    !Array.isArray(
+                        restored.news
+                    )
+                ) {
+
+                    throw new Error(
+                        "فرمت فایل اشتباه است."
+                    );
+
+                }
+
+
+                if (
+                    !confirm(
+                        "اطلاعات فعلی با فایل پشتیبان جایگزین شود؟"
+                    )
+                ) {
+
+                    return;
+
+                }
+
+
+                data = restored;
+
+                saveData();
+
+                refreshEverything();
+
+                showToast(
+                    "اطلاعات بازیابی شد."
                 );
 
+            } catch (error) {
 
-            if (
-                !data ||
-                !Array.isArray(
-                    data.teams
-                ) ||
-                !Array.isArray(
-                    data.players
-                ) ||
-                !Array.isArray(
-                    data.matches
-                )
-            ) {
-
-                throw new Error(
-                    "INVALID_BACKUP"
+                alert(
+                    "فایل پشتیبان معتبر نیست."
                 );
+
+                console.error(error);
 
             }
 
-
-            const answer =
-                window.confirm(
-                    "اطلاعات فعلی با اطلاعات فایل جایگزین شود؟"
-                );
+        };
 
 
-            if (!answer) {
-                event.target.value = "";
-                return;
-            }
+    reader.readAsText(file);
 
 
-            teams =
-                data.teams.map(
-                    team => ({
-                        id:
-                            team.id ||
-                            createId(),
+    event.target.value = "";
 
-                        name:
-                            String(
-                                team.name ||
-                                "تیم بدون نام"
-                            ),
-
-                        place:
-                            String(
-                                team.place ||
-                                ""
-                            ),
-
-                        logo:
-                            team.logo ||
-                            getDefaultPhoto()
-                    })
-                );
-
-
-            players =
-                data.players.map(
-                    player => ({
-                        id:
-                            player.id ||
-                            createId(),
-
-                        name:
-                            String(
-                                player.name ||
-                                "بازیکن بدون نام"
-                            ),
-
-                        teamId:
-                            player.teamId ||
-                            "",
-
-                        number:
-                            player.number ??
-                            "-",
-
-                        position:
-                            player.position ||
-                            "نامشخص",
-
-                        captain:
-                            player.captain ===
-                            true,
-
-                        photo:
-                            player.photo ||
-                            getDefaultPhoto()
-                    })
-                );
-
-
-            matches =
-                data.matches.map(
-                    match => ({
-                        id:
-                            match.id ||
-                            createId(),
-
-                        homeId:
-                            match.homeId ||
-                            "",
-
-                        awayId:
-                            match.awayId ||
-                            "",
-
-                        homeScore:
-                            Number(
-                                match.homeScore
-                            ) || 0,
-
-                        awayScore:
-                            Number(
-                                match.awayScore
-                            ) || 0,
-
-                        date:
-                            match.date ||
-                            "",
-
-                        finished:
-                            match.finished ===
-                            true
-                    })
-                );
-
-
-            if (!saveAll()) {
-                return;
-            }
-
-
-            renderAll();
-
-
-            showToast(
-                "✅ اطلاعات با موفقیت وارد شد."
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                "Import error:",
-                error
-            );
-
-
-            showToast(
-                "❌ فایل پشتیبان معتبر نیست."
-            );
-
-        }
-
-
-        event.target.value = "";
-
-    };
-
-
-    reader.onerror = () => {
-
-        showToast(
-            "❌ خواندن فایل انجام نشد."
-        );
-
-        event.target.value = "";
-
-    };
-
-
-    reader.readAsText(
-        file,
-        "UTF-8"
-    );
 }
 
 
 /* =========================================================
-   حذف همه اطلاعات
-   ========================================================= */
+   RESET
+========================================================= */
 
-document
-    .getElementById("clearData")
-    .addEventListener(
-        "click",
-        clearEverything
-    );
+function resetAllData() {
 
-
-function clearEverything() {
-
-    if (
-        !teams.length &&
-        !players.length &&
-        !matches.length
-    ) {
-
-        showToast(
-            "ℹ️ اطلاعاتی برای حذف وجود ندارد."
+    const first =
+        confirm(
+            "⚠️ همه تیم‌ها، بازیکنان، مسابقات و اطلاعیه‌ها حذف می‌شوند."
         );
 
+
+    if (!first) {
         return;
     }
 
 
-    const answer =
-        window.confirm(
-            "⚠️ همه تیم‌ها، بازیکنان و مسابقات حذف شوند؟"
+    const second =
+        confirm(
+            "واقعاً مطمئنی؟ این عملیات قابل برگشت نیست مگر اینکه قبلاً پشتیبان گرفته باشی."
         );
 
 
-    if (!answer) {
+    if (!second) {
         return;
     }
 
 
-    teams = [];
-
-    players = [];
-
-    matches = [];
+    data =
+        defaultData();
 
 
-    saveAll();
+    saveData();
 
-    renderAll();
-
+    refreshEverything();
 
     showToast(
-        "🗑️ تمام اطلاعات حذف شد."
+        "تمام اطلاعات حذف شد."
     );
+
 }
 
 
 /* =========================================================
-   وضعیت اینترنت
-   ========================================================= */
+   REFRESH
+========================================================= */
 
-function updateConnection() {
-
-    const dot =
-        document.getElementById(
-            "connectionDot"
-        );
-
-
-    const text =
-        document.getElementById(
-            "connectionText"
-        );
-
-
-    if (!dot || !text) {
-        return;
-    }
-
-
-    if (navigator.onLine) {
-
-        dot.style.background =
-            "#22c55e";
-
-        text.textContent =
-            "آنلاین";
-
-    } else {
-
-        dot.style.background =
-            "#ef4444";
-
-        text.textContent =
-            "آفلاین";
-
-    }
-}
-
-
-window.addEventListener(
-    "online",
-    updateConnection
-);
-
-
-window.addEventListener(
-    "offline",
-    updateConnection
-);
-
-
-/* =========================================================
-   رندر کامل برنامه
-   ========================================================= */
-
-function renderAll() {
-
-    updateStats();
+function refreshEverything() {
 
     updateTeamSelects();
+
+    renderPlayerFilters();
 
     renderTeams();
 
@@ -2513,45 +3270,95 @@ function renderAll() {
 
     renderMatches();
 
-    renderTable();
+    renderStandings();
 
-    updateConnection();
+    renderPlayerStats();
+
+    renderResults();
+
+    renderNews();
+
+    updateDashboard();
+
 }
 
 
 /* =========================================================
-   شروع برنامه
-   ========================================================= */
+   EVENT LISTENERS
+========================================================= */
 
-renderAll();
-/* =========================
-   چاپ اطلاعات
-========================= */
-
-const printButton =
-    document.getElementById("printData");
-
-if (printButton) {
-
-    printButton.addEventListener(
-        "click",
-        printTournament
+document
+    .getElementById("matchStatus")
+    .addEventListener(
+        "change",
+        updateMatchResultVisibility
     );
 
-}
 
-function printTournament() {
+document
+    .getElementById("teamImage")
+    .addEventListener(
+        "change",
+        async function () {
 
-    // قبل از چاپ، همه اطلاعات را تازه می‌کنیم
-    renderAll();
+            const file =
+                this.files[0];
 
-    showToast(
-        "🖨️ آماده‌سازی برای چاپ..."
+            if (!file) return;
+
+            const image =
+                await readImage(file);
+
+            const preview =
+                document.getElementById(
+                    "teamImagePreview"
+                );
+
+            preview.src =
+                image;
+
+            preview.classList.remove(
+                "hidden"
+            );
+
+        }
     );
 
-    setTimeout(() => {
 
-        window.print();
+document
+    .getElementById("playerImage")
+    .addEventListener(
+        "change",
+        async function () {
 
-    }, 300);
-}
+            const file =
+                this.files[0];
+
+            if (!file) return;
+
+            const image =
+                await readImage(file);
+
+            const preview =
+                document.getElementById(
+                    "playerImagePreview"
+                );
+
+            preview.src =
+                image;
+
+            preview.classList.remove(
+                "hidden"
+            );
+
+        }
+    );
+
+
+/* =========================================================
+   START
+========================================================= */
+
+refreshEverything();
+
+showPage("home");
