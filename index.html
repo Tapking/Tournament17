@@ -499,7 +499,7 @@
             >
                 💾
                 <strong>پشتیبان‌گیری</strong>
-                <small>ذخیره فایل اطلاعات</small>
+                <small>ساخت فایل انتقال شامل همه اطلاعات</small>
             </button>
 
 
@@ -508,16 +508,16 @@
                 📥
 
                 <strong>
-                    بازیابی اطلاعات
+                    📥 دریافت اطلاعات از فایل
                 </strong>
 
                 <small>
-                    انتخاب فایل پشتیبان
+                    انتخاب فایل انتقالی که دریافت کرده‌اید
                 </small>
 
                 <input
                     type="file"
-                    accept=".json"
+                    accept=".json,application/json"
                     onchange="restoreData(event)"
                     hidden
                 >
@@ -535,6 +535,8 @@
             </button>
 
         </div>
+
+        <p style="margin-top:16px;color:#6b7280;font-size:13px;line-height:1.9;">برای انتقال، ابتدا «ارسال اطلاعات به دیگران» را بزنید و فایل JSON دانلودشده را ارسال کنید. دریافت‌کننده از همین بخش، فایل را انتخاب می‌کند. دریافت فایل، اطلاعات فعلی او را جایگزین می‌کند.</p>
 
     </section>
 
