@@ -3072,142 +3072,124 @@ function buildPrintReport() {
 
 function backupData() {
 
-    const json =
-        JSON.stringify(
-            data,
-            null,
-            2
-        );
+    // یک فایل قابل انتقال شامل تمام اطلاعات و تصاویر برنامه می‌سازد.
+    const transferFile = {
+        app: "community-tournament",
+        formatVersion: 2,
+        exportedAt: new Date().toISOString(),
+        data: {
+            teams: data.teams,
+            players: data.players,
+            matches: data.matches,
+            news: data.news
+        }
+    };
 
+    const json = JSON.stringify(transferFile, null, 2);
+    const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
 
-    const blob =
-        new Blob(
-            [json],
-            {
-                type:
-                    "application/json"
-            }
-        );
-
-
-    const url =
-        URL.createObjectURL(blob);
-
-
-    const a =
-        document.createElement("a");
-
-
+    const date = new Date().toISOString().slice(0, 10);
     a.href = url;
-
-    a.download =
-        "community-tournament-backup.json";
-
+    a.download = `انتقال-اطلاعات-مسابقات-${date}.json`;
 
     document.body.appendChild(a);
-
     a.click();
-
     a.remove();
 
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 
-
-    showToast(
-        "فایل پشتیبان ساخته شد."
-    );
-
+    showToast("فایل انتقال اطلاعات آماده شد؛ آن را برای شخص دیگر بفرست.");
 }
 
 
 function restoreData(event) {
 
-    const file =
-        event.target.files[0];
+    const input = event.target;
+    const file = input.files && input.files[0];
 
+    if (!file) return;
 
-    if (!file) {
+    // از انتخاب فایل‌های بسیار بزرگ یا نامرتبط جلوگیری می‌کنیم.
+    if (!file.name.toLowerCase().endsWith(".json")) {
+        alert("لطفاً فایل انتقال با پسوند .json را انتخاب کنید.");
+        input.value = "";
         return;
     }
 
+    const reader = new FileReader();
 
-    const reader =
-        new FileReader();
+    reader.onload = function () {
+        try {
+            const parsed = JSON.parse(reader.result);
 
+            // پشتیبانی از فایل‌های قدیمی پشتیبان و قالب جدید انتقال
+            const restored = parsed && parsed.data ? parsed.data : parsed;
 
-    reader.onload =
-        function () {
-
-            try {
-
-                const restored =
-                    JSON.parse(
-                        reader.result
-                    );
-
-
-                if (
-                    !restored ||
-                    !Array.isArray(
-                        restored.teams
-                    ) ||
-                    !Array.isArray(
-                        restored.players
-                    ) ||
-                    !Array.isArray(
-                        restored.matches
-                    ) ||
-                    !Array.isArray(
-                        restored.news
-                    )
-                ) {
-
-                    throw new Error(
-                        "فرمت فایل اشتباه است."
-                    );
-
-                }
-
-
-                if (
-                    !confirm(
-                        "اطلاعات فعلی با فایل پشتیبان جایگزین شود؟"
-                    )
-                ) {
-
-                    return;
-
-                }
-
-
-                data = restored;
-
-                saveData();
-
-                refreshEverything();
-
-                showToast(
-                    "اطلاعات بازیابی شد."
-                );
-
-            } catch (error) {
-
-                alert(
-                    "فایل پشتیبان معتبر نیست."
-                );
-
-                console.error(error);
-
+            if (
+                !restored ||
+                !Array.isArray(restored.teams) ||
+                !Array.isArray(restored.players) ||
+                !Array.isArray(restored.matches) ||
+                !Array.isArray(restored.news)
+            ) {
+                throw new Error("ساختار فایل انتقال معتبر نیست.");
             }
 
-        };
+            // بررسی ارتباط بازیکنان و مسابقات با داده‌های ارسالی
+            const teamIds = new Set(restored.teams.map(team => team && team.id).filter(Boolean));
+            const validPlayers = restored.players.every(player =>
+                player && typeof player === "object" &&
+                typeof player.name === "string" &&
+                (!player.teamId || teamIds.has(player.teamId))
+            );
 
+            if (!validPlayers) {
+                throw new Error("اطلاعات بازیکنان یا تیم‌ها با هم سازگار نیست.");
+            }
 
-    reader.readAsText(file);
+            const sourceDate = parsed.exportedAt
+                ? new Date(parsed.exportedAt).toLocaleString("fa-IR")
+                : "نامشخص";
 
+            const message =
+                `فایل «${file.name}» انتخاب شد.\n` +
+                `تعداد تیم‌ها: ${restored.teams.length}\n` +
+                `تعداد بازیکنان: ${restored.players.length}\n` +
+                `تعداد مسابقات: ${restored.matches.length}\n` +
+                `تعداد اطلاعیه‌ها: ${restored.news.length}\n` +
+                `تاریخ ساخت فایل: ${sourceDate}\n\n` +
+                "با تأیید، اطلاعات فعلی این برنامه با اطلاعات فایل جایگزین می‌شود. بهتر است قبل از ادامه، از اطلاعات فعلی خروجی بگیرید.\n\nادامه می‌دهید؟";
 
-    event.target.value = "";
+            if (!confirm(message)) return;
 
+            data = {
+                teams: restored.teams,
+                players: restored.players,
+                matches: restored.matches,
+                news: restored.news
+            };
+
+            saveData();
+            refreshEverything();
+
+            showToast("همه اطلاعات فایل با موفقیت دریافت شد.");
+
+        } catch (error) {
+            console.error(error);
+            alert("فایل انتقال معتبر نیست یا اطلاعات آن ناقص است.");
+        } finally {
+            input.value = "";
+        }
+    };
+
+    reader.onerror = function () {
+        alert("خواندن فایل با مشکل روبه‌رو شد. دوباره تلاش کنید.");
+        input.value = "";
+    };
+
+    reader.readAsText(file, "UTF-8");
 }
 
 
